@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Obiectivele Familiei</title>
+    <title>Obiectivele Familiei (Supabase)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -14,7 +14,6 @@
         .fade-in { animation: fadeIn 0.3s ease-in-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         
-        /* Modal Backdrop */
         .modal-backdrop {
             background-color: rgba(0, 0, 0, 0.5);
             backdrop-filter: blur(4px);
@@ -27,95 +26,84 @@
         <!-- Content will be injected here by JavaScript -->
     </div>
 
-    <!-- Firebase & App Logic -->
+    <!-- Supabase & App Logic -->
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, doc, setDoc, addDoc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 
-        // Firebase Configuration
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        // 1. Inițializare Supabase cu datele tale
+        const supabaseUrl = 'https://pvbxctpfkcwsuqdntppe.supabase.co';
+        const supabaseKey = 'sb_publishable_jgZtvZVXSCplbeju-njPIQ_IkjerrGi';
+        const supabase = createClient(supabaseUrl, supabaseKey);
 
         // Application State
-        let currentUser = null;
         let userRole = localStorage.getItem('familyRole'); // 'sot' or 'sotie'
         let goals = [];
         let transactions = [];
         let selectedDate = new Date().toISOString().split('T')[0]; // Format YYYY-MM-DD
-        let unsubscribeGoals = null;
-        let unsubscribeTransactions = null;
+        let realTimeSubscription = null;
 
-        // DOM Elements
         const appContainer = document.getElementById('app');
 
-        // Initialize Authentication
-        const initAuth = async () => {
+        // 2. Funcții de citire din Supabase
+        const fetchData = async () => {
+            if (!userRole) return;
+            
             try {
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
-                }
+                // Fetch Obiective
+                const { data: goalsData, error: goalsError } = await supabase
+                    .from('goals')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+                
+                if (goalsError) throw goalsError;
+                if (goalsData) goals = goalsData;
+
+                // Fetch Tranzacții
+                const { data: transData, error: transError } = await supabase
+                    .from('transactions')
+                    .select('*')
+                    .order('timestamp', { ascending: false });
+                
+                if (transError) throw transError;
+                if (transData) transactions = transData;
+
+                renderDashboard();
             } catch (error) {
-                console.error("Eroare la autentificare:", error);
-                renderError("Nu s-a putut realiza conexiunea sigură. Te rugăm să reîncarci pagina.");
+                console.error("Eroare la citirea datelor din Supabase:", error);
+                renderError("Nu s-au putut încărca datele. Asigură-te că ai creat tabelele în Supabase.");
             }
         };
 
-        // Listen for auth state changes
-        onAuthStateChanged(auth, (user) => {
-            currentUser = user;
-            if (user) {
-                if (userRole) {
-                    setupListeners();
-                    renderDashboard();
-                } else {
-                    renderRoleSelection();
-                }
+        // 3. Setup ascultători Realtime
+        const setupRealtime = () => {
+            if (realTimeSubscription) supabase.removeChannel(realTimeSubscription);
+
+            realTimeSubscription = supabase.channel('public-changes')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'goals' }, () => {
+                    fetchData(); // Refetch când se modifică un obiectiv
+                })
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, () => {
+                    fetchData(); // Refetch când apare o tranzacție nouă
+                })
+                .subscribe();
+        };
+
+        // Start Aplicație
+        const initApp = () => {
+            if (userRole) {
+                fetchData().then(() => setupRealtime());
             } else {
-                renderLoading("Se conectează contul...");
+                renderRoleSelection();
             }
-        });
-
-        // Setup Firestore Listeners (Rule 2: Fetch all, filter in memory)
-        const setupListeners = () => {
-            if (!currentUser) return;
-
-            const goalsRef = collection(db, 'artifacts', appId, 'public', 'data', 'goals');
-            const transactionsRef = collection(db, 'artifacts', appId, 'public', 'data', 'transactions');
-
-            unsubscribeGoals = onSnapshot(goalsRef, (snapshot) => {
-                goals = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                if (userRole) renderDashboard();
-            }, (error) => console.error("Eroare citire obiective:", error));
-
-            unsubscribeTransactions = onSnapshot(transactionsRef, (snapshot) => {
-                transactions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                // Sort transactions by timestamp descending
-                transactions.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-                if (userRole) renderDashboard();
-            }, (error) => console.error("Eroare citire tranzacții:", error));
         };
 
         // UI Functions
-        const renderLoading = (message) => {
-            appContainer.innerHTML = `
-                <div class="flex-1 flex flex-col items-center justify-center h-full space-y-4">
-                    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-                    <p class="text-slate-500 font-medium">${message}</p>
-                </div>
-            `;
-        };
-
         const renderError = (message) => {
             appContainer.innerHTML = `
-                <div class="flex-1 flex flex-col items-center justify-center text-center">
+                <div class="flex-1 flex flex-col items-center justify-center text-center fade-in">
                     <i class="fas fa-exclamation-triangle text-red-500 text-4xl mb-4"></i>
                     <p class="text-slate-700">${message}</p>
+                    <button onclick="location.reload()" class="mt-4 px-4 py-2 bg-slate-200 rounded-lg">Reîncearcă</button>
                 </div>
             `;
         };
@@ -123,15 +111,14 @@
         const setRole = (role) => {
             userRole = role;
             localStorage.setItem('familyRole', role);
-            setupListeners();
-            renderDashboard();
+            appContainer.innerHTML = `<div class="flex h-full items-center justify-center"><i class="fas fa-spinner fa-spin text-3xl text-indigo-500"></i></div>`;
+            initApp();
         };
 
         const logout = () => {
             userRole = null;
             localStorage.removeItem('familyRole');
-            if (unsubscribeGoals) unsubscribeGoals();
-            if (unsubscribeTransactions) unsubscribeTransactions();
+            if (realTimeSubscription) supabase.removeChannel(realTimeSubscription);
             renderRoleSelection();
         };
 
@@ -143,7 +130,7 @@
                             <i class="fas fa-heart text-3xl"></i>
                         </div>
                         <h1 class="text-3xl font-bold text-slate-800">Obiectivele Familiei</h1>
-                        <p class="text-slate-500 mt-2">Conectat securizat. Alege rolul tău pentru a continua.</p>
+                        <p class="text-slate-500 mt-2">Alege rolul tău pentru a continua (Sincronizare Supabase)</p>
                     </div>
 
                     <div class="grid grid-cols-2 gap-4 w-full">
@@ -177,7 +164,7 @@
             const partnerGoals = goals.filter(g => g.owner === partnerRole);
             
             const todaysTransactions = transactions.filter(t => t.date === selectedDate);
-            const totalAddedToday = todaysTransactions.reduce((sum, t) => sum + t.amount, 0);
+            const totalAddedToday = todaysTransactions.reduce((sum, t) => sum + Number(t.amount), 0);
 
             let html = `
                 <div class="fade-in pb-20">
@@ -253,9 +240,8 @@
                             ${todaysTransactions.length === 0 ? `
                                 <p class="text-center py-4 text-slate-400 text-sm">Nicio contribuție în această dată.</p>
                             ` : todaysTransactions.map(t => {
-                                const fromMe = t.from === userRole;
-                                const giverName = t.from === 'sot' ? 'Soțul' : 'Soția';
-                                const receiverName = t.to === 'sot' ? 'Soțul' : 'Soția';
+                                const fromMe = t.from_role === userRole;
+                                const giverName = t.from_role === 'sot' ? 'Soțul' : 'Soția';
                                 const iconColor = fromMe ? `text-${myColor}-500` : `text-${partnerColor}-500`;
                                 
                                 return `
@@ -265,7 +251,7 @@
                                             <i class="fas fa-gift"></i>
                                         </div>
                                         <div>
-                                            <p class="font-medium text-slate-700 text-sm">${giverName} a contribuit la <span class="font-bold">"${t.goalTitle}"</span></p>
+                                            <p class="font-medium text-slate-700 text-sm">${giverName} a contribuit la <span class="font-bold">"${t.goal_title}"</span></p>
                                             <p class="text-xs text-slate-400">${new Date(t.timestamp).toLocaleTimeString('ro-RO', {hour: '2-digit', minute:'2-digit'})}</p>
                                         </div>
                                     </div>
@@ -366,28 +352,33 @@
                 const target = parseFloat(document.getElementById('goalTargetInput').value);
 
                 if (!title || isNaN(target) || target <= 0) {
-                    alert('Te rugăm să completezi corect numele și suma.'); // Simple validation message
+                    alert('Te rugăm să completezi corect numele și suma.');
                     return;
                 }
-
-                if (!currentUser) return; // Guard against unauthenticated writes
 
                 try {
                     const btn = document.querySelector('button[onclick="window.appActions.saveGoal()"]');
                     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Se salvează...';
                     btn.disabled = true;
 
-                    await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'goals'), {
-                        title: title,
-                        target: target,
-                        current: 0,
-                        owner: userRole,
-                        createdAt: new Date().toISOString()
-                    });
+                    const { error } = await supabase
+                        .from('goals')
+                        .insert([
+                            { 
+                                title: title, 
+                                target: target, 
+                                current: 0, 
+                                owner: userRole 
+                            }
+                        ]);
+
+                    if (error) throw error;
 
                     window.appActions.closeModal();
+                    fetchData(); // Manual refetch for immediate UI update
                 } catch (error) {
                     console.error("Eroare la salvare:", error);
+                    alert("Eroare la salvare: " + error.message);
                     window.appActions.closeModal();
                 }
             },
@@ -428,8 +419,6 @@
                     return;
                 }
 
-                if (!currentUser) return;
-
                 const goal = goals.find(g => g.id === goalId);
                 if (!goal) return;
 
@@ -438,36 +427,47 @@
                     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Se trimite...';
                     btn.disabled = true;
 
-                    const newAmount = goal.current + amount;
-                    const goalRef = doc(db, 'artifacts', appId, 'public', 'data', 'goals', goalId);
-                    
-                    // Update goal
-                    await updateDoc(goalRef, { current: newAmount });
+                    const newAmount = Number(goal.current) + amount;
 
-                    // Log transaction
+                    // 1. Update Obiectiv
+                    const { error: updateError } = await supabase
+                        .from('goals')
+                        .update({ current: newAmount })
+                        .eq('id', goalId);
+                    
+                    if (updateError) throw updateError;
+
+                    // 2. Adaugă Tranzacție
                     const today = new Date();
-                    await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'transactions'), {
-                        goalId: goalId,
-                        goalTitle: goal.title,
-                        amount: amount,
-                        from: userRole,
-                        to: goal.owner,
-                        date: today.toISOString().split('T')[0], // YYYY-MM-DD
-                        timestamp: today.toISOString()
-                    });
+                    const { error: insertError } = await supabase
+                        .from('transactions')
+                        .insert([
+                            {
+                                goal_id: goalId,
+                                goal_title: goal.title,
+                                amount: amount,
+                                from_role: userRole,
+                                to_role: goal.owner,
+                                date: today.toISOString().split('T')[0],
+                                timestamp: today.toISOString()
+                            }
+                        ]);
+
+                    if (insertError) throw insertError;
 
                     window.appActions.closeModal();
+                    fetchData(); // Manual refetch for immediate update
                     
-                    // Show success state briefly in UI (optional, since onSnapshot handles realtime update)
                 } catch (error) {
                     console.error("Eroare la trimiterea cadoului:", error);
+                    alert("Eroare la trimiterea banilor: " + error.message);
                     window.appActions.closeModal();
                 }
             }
         };
 
-        // Start App
-        initAuth();
+        // Bootstrap
+        initApp();
 
     </script>
 </body>
