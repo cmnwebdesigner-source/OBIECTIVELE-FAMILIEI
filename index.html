@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Obiectivele Familiei</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        .hide-scroll::-webkit-scrollbar { display: none; }
+        .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        /* Modal Backdrop */
+        .modal-backdrop {
+            background-color: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+        }
+    </style>
+</head>
+<body class="text-slate-800 antialiased min-h-screen">
+
+    <div id="app" class="max-w-4xl mx-auto p-4 md:p-6 min-h-screen flex flex-col">
+        <!-- Content will be injected here by JavaScript -->
+    </div>
+
+    <!-- Firebase & App Logic -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, doc, setDoc, addDoc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Firebase Configuration
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+
+        // Application State
+        let currentUser = null;
+        let userRole = localStorage.getItem('familyRole'); // 'sot' or 'sotie'
+        let goals = [];
+        let transactions = [];
+        let selectedDate = new Date().toISOString().split('T')[0]; // Format YYYY-MM-DD
+        let unsubscribeGoals = null;
+        let unsubscribeTransactions = null;
+
+        // DOM Elements
+        const appContainer = document.getElementById('app');
+
+        // Initialize Authentication
+        const initAuth = async () => {
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (error) {
+                console.error("Eroare la autentificare:", error);
+                renderError("Nu s-a putut realiza conexiunea sigură. Te rugăm să reîncarci pagina.");
+            }
+        };
+
+        // Listen for auth state changes
+        onAuthStateChanged(auth, (user) => {
+            currentUser = user;
+            if (user) {
+                if (userRole) {
+                    setupListeners();
+                    renderDashboard();
+                } else {
+                    renderRoleSelection();
+                }
+            } else {
+                renderLoading("Se conectează contul...");
+            }
+        });
+
+        // Setup Firestore Listeners (Rule 2: Fetch all, filter in memory)
+        const setupListeners = () => {
+            if (!currentUser) return;
+
+            const goalsRef = collection(db, 'artifacts', appId, 'public', 'data', 'goals');
+            const transactionsRef = collection(db, 'artifacts', appId, 'public', 'data', 'transactions');
+
+            unsubscribeGoals = onSnapshot(goalsRef, (snapshot) => {
+                goals = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                if (userRole) renderDashboard();
+            }, (error) => console.error("Eroare citire obiective:", error));
+
+            unsubscribeTransactions = onSnapshot(transactionsRef, (snapshot) => {
+                transactions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                // Sort transactions by timestamp descending
+                transactions.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                if (userRole) renderDashboard();
+            }, (error) => console.error("Eroare citire tranzacții:", error));
+        };
+
+        // UI Functions
+        const renderLoading = (message) => {
+            appContainer.innerHTML = `
+                <div class="flex-1 flex flex-col items-center justify-center h-full space-y-4">
+                    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+                    <p class="text-slate-500 font-medium">${message}</p>
+                </div>
+            `;
+        };
+
+        const renderError = (message) => {
+            appContainer.innerHTML = `
+                <div class="flex-1 flex flex-col items-center justify-center text-center">
+                    <i class="fas fa-exclamation-triangle text-red-500 text-4xl mb-4"></i>
+                    <p class="text-slate-700">${message}</p>
+                </div>
+            `;
+        };
+
+        const setRole = (role) => {
+            userRole = role;
+            localStorage.setItem('familyRole', role);
+            setupListeners();
+            renderDashboard();
+        };
+
+        const logout = () => {
+            userRole = null;
+            localStorage.removeItem('familyRole');
+            if (unsubscribeGoals) unsubscribeGoals();
+            if (unsubscribeTransactions) unsubscribeTransactions();
+            renderRoleSelection();
+        };
+
+        const renderRoleSelection = () => {
+            appContainer.innerHTML = `
+                <div class="flex-1 flex flex-col items-center justify-center fade-in max-w-lg mx-auto w-full">
+                    <div class="text-center mb-10">
+                        <div class="inline-flex items-center justify-center w-20 h-20 bg-indigo-100 text-indigo-600 rounded-full mb-4 shadow-sm">
+                            <i class="fas fa-heart text-3xl"></i>
+                        </div>
+                        <h1 class="text-3xl font-bold text-slate-800">Obiectivele Familiei</h1>
+                        <p class="text-slate-500 mt-2">Conectat securizat. Alege rolul tău pentru a continua.</p>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4 w-full">
+                        <button onclick="window.appActions.setRole('sot')" class="group flex flex-col items-center p-6 bg-white border-2 border-transparent hover:border-blue-400 hover:bg-blue-50 rounded-2xl shadow-sm transition-all duration-200">
+                            <div class="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition-transform">
+                                <i class="fas fa-male"></i>
+                            </div>
+                            <span class="font-semibold text-lg text-slate-700 group-hover:text-blue-700">Sunt Soțul</span>
+                        </button>
+
+                        <button onclick="window.appActions.setRole('sotie')" class="group flex flex-col items-center p-6 bg-white border-2 border-transparent hover:border-rose-400 hover:bg-rose-50 rounded-2xl shadow-sm transition-all duration-200">
+                            <div class="w-16 h-16 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition-transform">
+                                <i class="fas fa-female"></i>
+                            </div>
+                            <span class="font-semibold text-lg text-slate-700 group-hover:text-rose-700">Sunt Soția</span>
+                        </button>
+                    </div>
+                </div>
+            `;
+        };
+
+        const renderDashboard = () => {
+            const isSot = userRole === 'sot';
+            const partnerRole = isSot ? 'sotie' : 'sot';
+            const myColor = isSot ? 'blue' : 'rose';
+            const partnerColor = isSot ? 'rose' : 'blue';
+            const myName = isSot ? 'Soț' : 'Soție';
+            const partnerName = isSot ? 'Soție' : 'Soț';
+
+            const myGoals = goals.filter(g => g.owner === userRole);
+            const partnerGoals = goals.filter(g => g.owner === partnerRole);
+            
+            const todaysTransactions = transactions.filter(t => t.date === selectedDate);
+            const totalAddedToday = todaysTransactions.reduce((sum, t) => sum + t.amount, 0);
+
+            let html = `
+                <div class="fade-in pb-20">
+                    <!-- Header -->
+                    <header class="flex justify-between items-center mb-8 bg-white p-4 rounded-2xl shadow-sm">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-full bg-${myColor}-100 text-${myColor}-600 flex items-center justify-center text-lg">
+                                <i class="fas fa-${isSot ? 'male' : 'female'}"></i>
+                            </div>
+                            <div>
+                                <h2 class="font-bold text-slate-800 text-lg leading-tight">Salut, ${myName}!</h2>
+                                <p class="text-xs text-slate-500">Obiectivele Familiei</p>
+                            </div>
+                        </div>
+                        <button onclick="window.appActions.logout()" class="text-sm text-slate-500 hover:text-slate-800 transition-colors bg-slate-100 px-3 py-1.5 rounded-lg">
+                            <i class="fas fa-exchange-alt mr-1"></i> Schimbă Rol
+                        </button>
+                    </header>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- My Goals -->
+                        <section class="bg-white rounded-2xl p-5 shadow-sm border-t-4 border-${myColor}-400">
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="font-bold text-lg text-slate-800">Obiectivele Mele</h3>
+                                <button onclick="window.appActions.openAddGoalModal()" class="w-8 h-8 rounded-full bg-${myColor}-100 text-${myColor}-600 hover:bg-${myColor}-200 flex items-center justify-center transition-colors">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                            </div>
+                            
+                            <div class="space-y-4">
+                                ${myGoals.length === 0 ? `
+                                    <div class="text-center py-6 text-slate-400">
+                                        <i class="fas fa-bullseye text-3xl mb-2 opacity-50"></i>
+                                        <p class="text-sm">Nu ai niciun obiectiv setat.</p>
+                                    </div>
+                                ` : myGoals.map(goal => generateGoalCard(goal, true)).join('')}
+                            </div>
+                        </section>
+
+                        <!-- Partner's Goals -->
+                        <section class="bg-white rounded-2xl p-5 shadow-sm border-t-4 border-${partnerColor}-400">
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="font-bold text-lg text-slate-800">Obiectivele Partenerului (${partnerName})</h3>
+                            </div>
+                            
+                            <div class="space-y-4">
+                                ${partnerGoals.length === 0 ? `
+                                    <div class="text-center py-6 text-slate-400">
+                                        <i class="fas fa-box-open text-3xl mb-2 opacity-50"></i>
+                                        <p class="text-sm">Partenerul nu are obiective momentan.</p>
+                                    </div>
+                                ` : partnerGoals.map(goal => generateGoalCard(goal, false, partnerColor)).join('')}
+                            </div>
+                        </section>
+                    </div>
+
+                    <!-- Calendar & History -->
+                    <section class="mt-8 bg-white rounded-2xl p-5 shadow-sm">
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+                            <div>
+                                <h3 class="font-bold text-lg text-slate-800"><i class="far fa-calendar-alt text-indigo-500 mr-2"></i>Calendar Contribuții</h3>
+                                <p class="text-sm text-slate-500">Vezi ce bani s-au adăugat în orice zi.</p>
+                            </div>
+                            <input type="date" id="dateFilter" value="${selectedDate}" onchange="window.appActions.changeDate(this.value)" class="bg-slate-50 border border-slate-200 text-slate-700 rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        </div>
+
+                        <div class="bg-slate-50 rounded-xl p-4 mb-4 flex justify-between items-center border border-slate-100">
+                            <span class="font-medium text-slate-600">Total adăugat în această zi:</span>
+                            <span class="font-bold text-xl text-green-600">${totalAddedToday} RON</span>
+                        </div>
+
+                        <div class="space-y-3">
+                            ${todaysTransactions.length === 0 ? `
+                                <p class="text-center py-4 text-slate-400 text-sm">Nicio contribuție în această dată.</p>
+                            ` : todaysTransactions.map(t => {
+                                const fromMe = t.from === userRole;
+                                const giverName = t.from === 'sot' ? 'Soțul' : 'Soția';
+                                const receiverName = t.to === 'sot' ? 'Soțul' : 'Soția';
+                                const iconColor = fromMe ? `text-${myColor}-500` : `text-${partnerColor}-500`;
+                                
+                                return `
+                                <div class="flex items-center justify-between p-3 bg-white border border-slate-100 rounded-xl shadow-sm">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center ${iconColor}">
+                                            <i class="fas fa-gift"></i>
+                                        </div>
+                                        <div>
+                                            <p class="font-medium text-slate-700 text-sm">${giverName} a contribuit la <span class="font-bold">"${t.goalTitle}"</span></p>
+                                            <p class="text-xs text-slate-400">${new Date(t.timestamp).toLocaleTimeString('ro-RO', {hour: '2-digit', minute:'2-digit'})}</p>
+                                        </div>
+                                    </div>
+                                    <span class="font-bold text-green-600 whitespace-nowrap">+${t.amount} RON</span>
+                                </div>
+                                `
+                            }).join('')}
+                        </div>
+                    </section>
+                </div>
+
+                <!-- Modals Container -->
+                <div id="modalContainer"></div>
+            `;
+            
+            appContainer.innerHTML = html;
+        };
+
+        const generateGoalCard = (goal, isMine, accentColor = 'indigo') => {
+            const percent = Math.min(100, Math.round((goal.current / goal.target) * 100));
+            const isCompleted = percent >= 100;
+
+            return `
+                <div class="border border-slate-100 rounded-xl p-4 bg-slate-50 relative overflow-hidden">
+                    ${isCompleted ? `<div class="absolute top-0 right-0 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded-bl-lg">COMPLETAT</div>` : ''}
+                    
+                    <div class="flex justify-between items-start mb-2">
+                        <h4 class="font-bold text-slate-700 pr-16">${goal.title}</h4>
+                        <div class="text-right">
+                            <span class="text-sm font-bold text-slate-800">${goal.current}</span>
+                            <span class="text-xs text-slate-500">/ ${goal.target} RON</span>
+                        </div>
+                    </div>
+                    
+                    <div class="w-full bg-slate-200 rounded-full h-2.5 mb-3">
+                        <div class="bg-${isCompleted ? 'green' : accentColor}-500 h-2.5 rounded-full transition-all duration-500" style="width: ${percent}%"></div>
+                    </div>
+                    
+                    <div class="flex justify-between items-center mt-3">
+                        <span class="text-xs font-medium text-slate-500">${percent}% complet</span>
+                        ${!isMine && !isCompleted ? `
+                            <button onclick="window.appActions.openGiftModal('${goal.id}', '${goal.title}')" class="text-sm bg-${accentColor}-500 hover:bg-${accentColor}-600 text-white px-4 py-1.5 rounded-lg transition-colors shadow-sm font-medium">
+                                <i class="fas fa-gift mr-1"></i> Contribuie
+                            </button>
+                        ` : ''}
+                        ${isMine && !isCompleted ? `
+                            <span class="text-xs text-slate-400 italic">Așteaptă surprize...</span>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        };
+
+        // Actions & Modals
+        window.appActions = {
+            setRole: setRole,
+            logout: logout,
+            changeDate: (newDate) => {
+                selectedDate = newDate;
+                renderDashboard();
+            },
+            
+            closeModal: () => {
+                document.getElementById('modalContainer').innerHTML = '';
+            },
+
+            openAddGoalModal: () => {
+                const modalHtml = `
+                    <div class="fixed inset-0 modal-backdrop flex items-center justify-center z-50 p-4">
+                        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 fade-in relative">
+                            <button onclick="window.appActions.closeModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600">
+                                <i class="fas fa-times text-xl"></i>
+                            </button>
+                            <h3 class="text-xl font-bold mb-4 text-slate-800">Adaugă Obiectiv Nou</h3>
+                            
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">Nume obiectiv (ex. Laptop, Vacanță)</label>
+                                    <input type="text" id="goalTitleInput" class="w-full px-4 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none" placeholder="Introdu numele...">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">Suma necesară (RON)</label>
+                                    <input type="number" id="goalTargetInput" min="1" class="w-full px-4 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none" placeholder="ex. 3000">
+                                </div>
+                                <button onclick="window.appActions.saveGoal()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition-colors mt-2">
+                                    Salvează Obiectivul
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('modalContainer').innerHTML = modalHtml;
+                setTimeout(() => document.getElementById('goalTitleInput').focus(), 100);
+            },
+
+            saveGoal: async () => {
+                const title = document.getElementById('goalTitleInput').value.trim();
+                const target = parseFloat(document.getElementById('goalTargetInput').value);
+
+                if (!title || isNaN(target) || target <= 0) {
+                    alert('Te rugăm să completezi corect numele și suma.'); // Simple validation message
+                    return;
+                }
+
+                if (!currentUser) return; // Guard against unauthenticated writes
+
+                try {
+                    const btn = document.querySelector('button[onclick="window.appActions.saveGoal()"]');
+                    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Se salvează...';
+                    btn.disabled = true;
+
+                    await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'goals'), {
+                        title: title,
+                        target: target,
+                        current: 0,
+                        owner: userRole,
+                        createdAt: new Date().toISOString()
+                    });
+
+                    window.appActions.closeModal();
+                } catch (error) {
+                    console.error("Eroare la salvare:", error);
+                    window.appActions.closeModal();
+                }
+            },
+
+            openGiftModal: (goalId, goalTitle) => {
+                const modalHtml = `
+                    <div class="fixed inset-0 modal-backdrop flex items-center justify-center z-50 p-4">
+                        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 fade-in relative">
+                            <button onclick="window.appActions.closeModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600">
+                                <i class="fas fa-times text-xl"></i>
+                            </button>
+                            <h3 class="text-xl font-bold mb-1 text-slate-800">Oferă Cadou</h3>
+                            <p class="text-sm text-slate-500 mb-5">Contribui la obiectivul <span class="font-semibold text-slate-700">"${goalTitle}"</span></p>
+                            
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">Câți bani vrei să oferi? (RON)</label>
+                                    <div class="relative">
+                                        <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-500 font-medium">RON</span>
+                                        <input type="number" id="giftAmountInput" min="1" class="w-full pl-14 pr-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-lg font-bold text-slate-800" placeholder="0">
+                                    </div>
+                                </div>
+                                <button onclick="window.appActions.sendGift('${goalId}')" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 rounded-xl transition-colors mt-2 flex justify-center items-center gap-2">
+                                    <i class="fas fa-paper-plane"></i> Trimite Cadoul
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('modalContainer').innerHTML = modalHtml;
+                setTimeout(() => document.getElementById('giftAmountInput').focus(), 100);
+            },
+
+            sendGift: async (goalId) => {
+                const amount = parseFloat(document.getElementById('giftAmountInput').value);
+                if (isNaN(amount) || amount <= 0) {
+                    alert('Introdu o sumă validă.');
+                    return;
+                }
+
+                if (!currentUser) return;
+
+                const goal = goals.find(g => g.id === goalId);
+                if (!goal) return;
+
+                try {
+                    const btn = document.querySelector(`button[onclick="window.appActions.sendGift('${goalId}')"]`);
+                    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Se trimite...';
+                    btn.disabled = true;
+
+                    const newAmount = goal.current + amount;
+                    const goalRef = doc(db, 'artifacts', appId, 'public', 'data', 'goals', goalId);
+                    
+                    // Update goal
+                    await updateDoc(goalRef, { current: newAmount });
+
+                    // Log transaction
+                    const today = new Date();
+                    await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'transactions'), {
+                        goalId: goalId,
+                        goalTitle: goal.title,
+                        amount: amount,
+                        from: userRole,
+                        to: goal.owner,
+                        date: today.toISOString().split('T')[0], // YYYY-MM-DD
+                        timestamp: today.toISOString()
+                    });
+
+                    window.appActions.closeModal();
+                    
+                    // Show success state briefly in UI (optional, since onSnapshot handles realtime update)
+                } catch (error) {
+                    console.error("Eroare la trimiterea cadoului:", error);
+                    window.appActions.closeModal();
+                }
+            }
+        };
+
+        // Start App
+        initAuth();
+
+    </script>
+</body>
+</html>
