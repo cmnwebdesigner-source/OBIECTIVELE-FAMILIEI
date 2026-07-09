@@ -1219,7 +1219,7 @@
       const filteredTransactions = t.filter(transactionBelongsToFamily);
       const filteredGameRooms = (gr || []).filter(r => r.family_code === familyCode && (r.creator_email === currentUser?.email || r.opponent_email === currentUser?.email));
       const filteredGameWallets = (gw || []).filter(w => w.family_code === familyCode);
-      const filteredGameTransactions = (gh || []).filter(x => x.family_code === familyCode && (!x.user_email || x.user_email === currentUser?.email));
+      const filteredGameTransactions = (gh || []).filter(x => x.family_code === familyCode);
 
       const newlyCompleted = [];
       let piggyNeedsConfetti = false;
@@ -1272,7 +1272,7 @@
         .on('postgres_changes', { event:'*', schema:'public', table:'transactions' }, scheduleSoftRefresh)
         .on('postgres_changes', { event:'*', schema:'public', table:'profiles' }, scheduleSoftRefresh)
         .on('postgres_changes', { event:'*', schema:'public', table:'calculator_history' }, scheduleSoftRefresh)
-        .on('postgres_changes', { event:'*', schema:'public', table:'game_rooms' }, () => scheduleSoftRefresh(120))
+        .on('postgres_changes', { event:'*', schema:'public', table:'game_rooms' }, () => scheduleSoftRefresh(60))
         .on('postgres_changes', { event:'*', schema:'public', table:'game_wallets' }, scheduleSoftRefresh)
         .on('postgres_changes', { event:'*', schema:'public', table:'game_transactions' }, scheduleSoftRefresh)
         .subscribe();
@@ -1835,10 +1835,36 @@
           <span class="game-pill live">Deschide</span>
         </button>
         ${latestRoomHTML()}
+        ${gameRoundsHistoryHTML()}
         <div class="section">
           <div class="section-head"><span>Istoric Sold Jocuri</span><small>${gameTransactions.length}</small></div>
           <div class="space-y-2">${gameTransactions.length ? gameTransactions.slice(0,8).map(gameTransactionRow).join('') : emptyHTML('Nu există încă mișcări în soldul jocurilor.')}</div>
         </div>`;
+    }
+
+    function gameRoundsHistoryHTML() {
+      const rounds = gameRoomsForMe().filter(r => r.status === 'finished').slice(0, 8);
+      return `<div class="section">
+        <div class="section-head"><span>Istoric runde</span><small>${rounds.length}</small></div>
+        <div class="space-y-2">${rounds.length ? rounds.map(gameRoundRow).join('') : emptyHTML('Nu există runde finalizate încă.')}</div>
+      </div>`;
+    }
+
+    function gameRoundRow(room) {
+      const d = new Date(room.finished_at || room.created_at || new Date().toISOString());
+      const dateText = d.toLocaleDateString('ro-RO', { day:'2-digit', month:'short', year:'numeric' });
+      const timeText = d.toLocaleTimeString('ro-RO', { hour:'2-digit', minute:'2-digit' });
+      const other = opponentOfRoom(room);
+      const myScore = gameScoreFor(room, currentUser?.email);
+      const otherScore = gameScoreFor(room, other);
+      const winner = room.winner_email ? gamePersonLabel(room.winner_email) : 'Egalitate';
+      const color = room.winner_email === currentUser?.email ? 'var(--success)' : room.winner_email ? 'var(--danger)' : 'var(--muted)';
+      return `<div class="card" style="padding:12px 13px">
+        <div class="flex items-center justify-between gap-3">
+          <div class="min-w-0"><p class="text-sm" style="color:var(--text)">${escapeHTML(winner)}</p><p class="text-[11px] muted mt-1">${dateText} · ${timeText} · ${myScore} - ${otherScore}</p></div>
+          <p class="text-sm" style="color:${color}; white-space:nowrap;">${money(room.bet_amount)} RON</p>
+        </div>
+      </div>`;
     }
 
     function gameTransactionRow(t) {
@@ -1877,7 +1903,7 @@
         ${waiting ? flappyRoomStatusHTML(room) : `<button class="btn btn-gold btn-full" onclick="window.appActions.sendFlappyInvite('${opponent}')">Trimite invitație</button>`}
         ${room && status === 'accepted' && isCreator ? `<button class="btn btn-gold btn-full mt-3" onclick="window.appActions.startFlappyRoom('${room.id}')">START JOC</button>` : ''}
         ${room && ['countdown','playing'].includes(status) ? `<button class="btn btn-soft btn-full mt-3" onclick="window.appActions.openFlappyRoom('${room.id}')">Intră în joc</button>` : ''}
-        ${room && status === 'finished' && isCreator ? `<button class="btn btn-gold btn-full mt-3" onclick="window.appActions.resetFlappySelection()">Joacă din nou</button>` : ''}`;
+        ${room && status === 'finished' && isCreator ? `<button class="btn btn-gold btn-full mt-3" onclick="window.appActions.replayFlappyRoom('${room.id}')">Joacă din nou</button>` : ''}`;
     }
 
     function flappyRoomStatusHTML(room) {
@@ -1920,7 +1946,7 @@
           <div id="flappyOverlay" class="flappy-overlay" style="${room.status === 'playing' ? 'display:none' : ''}">
             <div class="flappy-count" id="flappyCount">${finished ? (room.winner_email === currentUser.email ? 'Ai câștigat' : room.winner_email ? 'Ai pierdut' : 'Egal') : '3'}</div>
             <p class="text-sm mt-2" style="color:#0f172a" id="flappyMessage">${finished ? winnerText : 'Pregătește-te'}</p>
-            ${finished && room.creator_email === currentUser.email ? `<button class="btn btn-gold mt-4" onclick="window.appActions.resetFlappySelection()">Joacă din nou</button>` : ''}
+            ${finished && room.creator_email === currentUser.email ? `<button class="btn btn-gold mt-4" onclick="window.appActions.replayFlappyRoom('${room.id}')">Joacă din nou</button>` : ''}
           </div>
           ${!finished ? `<div class="catch-hint">Atinge monedele. Bomba scade 10 puncte. X2 și fulger țin 5 secunde.</div>` : ''}
         </div>`;
@@ -2027,22 +2053,24 @@
 
 
     function playInviteSound() {
+      try { if (navigator.vibrate) navigator.vibrate([90, 40, 90]); } catch (_) {}
       try {
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         if (!AudioContext) return;
         const ctx = new AudioContext();
+        if (ctx.state === 'suspended') ctx.resume().catch(()=>{});
         const gain = ctx.createGain();
         const o1 = ctx.createOscillator();
         const o2 = ctx.createOscillator();
         o1.type = 'sine'; o2.type = 'triangle';
-        o1.frequency.value = 660; o2.frequency.value = 990;
+        o1.frequency.value = 740; o2.frequency.value = 1180;
         gain.gain.setValueAtTime(0.0001, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.07, ctx.currentTime + 0.02);
-        gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.22);
+        gain.gain.exponentialRampToValueAtTime(0.11, ctx.currentTime + 0.025);
+        gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.34);
         o1.connect(gain); o2.connect(gain); gain.connect(ctx.destination);
-        o1.start(); o2.start();
-        o1.stop(ctx.currentTime + 0.24); o2.stop(ctx.currentTime + 0.24);
-        setTimeout(() => ctx.close().catch(()=>{}), 400);
+        o1.start(ctx.currentTime); o2.start(ctx.currentTime + 0.045);
+        o1.stop(ctx.currentTime + 0.26); o2.stop(ctx.currentTime + 0.34);
+        setTimeout(() => ctx.close().catch(()=>{}), 650);
       } catch (_) {}
     }
 
@@ -2283,13 +2311,13 @@
         let x = 32 + Math.random() * (W - 64);
         if (Math.abs(x - state.lastSpawnX) < 56) x = x < W / 2 ? x + 70 : x - 70;
         state.lastSpawnX = x;
-        const baseSpeed = Date.now() < state.speedUntil ? 4.8 : 3.0;
+        const baseSpeed = Date.now() < state.speedUntil ? 4.0 : 2.45;
         const item = {
           type,
           x,
           y: -30,
           r: type === 'coin' ? 20 : type === 'bomb' ? 19 : 22,
-          v: baseSpeed + Math.random() * 1.35,
+          v: baseSpeed + Math.random() * 0.85,
           value: 5
         };
         state.items.push(item);
@@ -2334,9 +2362,9 @@
         state.frame++;
         const speedMode = now < state.speedUntil;
         const x2Mode = now < state.x2Until;
-        const spawnEvery = speedMode ? 20 : 30;
+        const spawnEvery = speedMode ? 28 : 42;
         if (state.frame % spawnEvery === 0) spawnItem('coin');
-        if (state.frame % 92 === 0) spawnItem('bomb');
+        if (state.frame % 150 === 0) spawnItem('bomb');
         if (state.x2Index < 3 && state.score >= state.x2Thresholds[state.x2Index]) { state.x2Index++; spawnItem('x2'); }
         if (state.speedIndex < 3 && state.score >= state.speedThresholds[state.speedIndex]) { state.speedIndex++; spawnItem('bolt'); }
 
@@ -2442,6 +2470,27 @@
       openFlappyRoom(id) { selectedGameRoomId = id; previousPage = currentPage; currentPage = 'flappyGame'; renderApp(); },
       setGameBet(v) { selectedBetAmount = Number(v || 5); renderApp(); },
       resetFlappySelection() { selectedGameRoomId = ''; previousPage = 'games'; currentPage = 'flappyLobby'; renderApp(); },
+      async replayFlappyRoom(id) {
+        const room = gameRooms.find(r => r.id === id);
+        if (!room) return alert('Runda nu mai există.');
+        if (room.creator_email !== currentUser.email) return alert('Doar cel care a trimis invitația poate porni din nou.');
+        try {
+          stopFlappyLoop();
+          const startAt = new Date(Date.now() + 3200).toISOString();
+          const scores = { [room.creator_email]:0, [room.opponent_email]:0 };
+          const patch = { status:'countdown', start_at:startAt, scores, finished_players:{}, winner_email:null, finished_at:null };
+          const { data, error } = await supabase.from('game_rooms').update(patch).eq('id', id).select('*').maybeSingle();
+          if (error) throw error;
+          if (data) gameRooms = [data, ...gameRooms.filter(r => r.id !== id)];
+          selectedGameRoomId = id;
+          previousPage = 'games';
+          currentPage = 'flappyGame';
+          renderApp(true);
+          scheduleSoftRefresh(80);
+        } catch (error) {
+          alert('Eroare la repornirea jocului: ' + (error.message || error));
+        }
+      },
       openMoneyHistory(type) { selectedMoneyHistoryType = type === 'received' ? 'received' : 'offered'; selectedMoneyHistoryMonth = firstOfMonth(todayISO()); previousPage = currentPage; currentPage = 'moneyHistory'; renderApp(); },
       shiftMoneyHistoryMonth(months) { selectedMoneyHistoryMonth = shiftMonth(selectedMoneyHistoryMonth || firstOfMonth(todayISO()), months); renderApp(); },
       openPartnerProfile(encodedEmail = '') {
@@ -2778,7 +2827,39 @@
         const oldGoal = Number(goal.current || 0);
         const wallet = gameWallets.find(w => w.user_email === currentUser.email && w.family_code === familyCode);
         const oldWallet = Number(wallet?.balance || 0);
+        const tempTransactionId = 'local-game-withdraw-' + Date.now();
+        const tempGameTransactionId = 'local-game-wallet-' + Date.now();
+        const nowIso = new Date().toISOString();
         try {
+          // Optimizare vizuală: mutarea apare instant, salvarea se confirmă în spate.
+          goal.current = oldGoal + amount;
+          if (wallet) wallet.balance = Math.max(0, oldWallet - amount);
+          else gameWallets.push({ user_email: currentUser.email, family_code: familyCode, balance: Math.max(0, oldWallet - amount), updated_at: nowIso });
+          transactions.unshift({
+            id: tempTransactionId,
+            goal_id: goalId,
+            goal_title: String(goal.title || '').toUpperCase(),
+            amount,
+            from_role: 'SOLD_JOCURI',
+            to_role: goal.owner,
+            date: todayISO(),
+            timestamp: nowIso,
+            family_code: familyCode,
+            source: 'game_withdrawal'
+          });
+          gameTransactions.unshift({
+            id: tempGameTransactionId,
+            family_code: familyCode,
+            user_email: currentUser.email,
+            amount: -amount,
+            type: 'withdraw',
+            note: 'Retras în obiectiv: ' + String(goal.title || '').toUpperCase(),
+            created_at: nowIso
+          });
+          this.closeModal();
+          suppressSoftUntil = Date.now() + 1700;
+          renderApp(true);
+
           const { data, error } = await supabase.rpc('withdraw_game_to_goal', {
             p_user_email: currentUser.email,
             p_family_code: familyCode,
@@ -2788,14 +2869,17 @@
           if (error) throw error;
           const payload = Array.isArray(data) ? data[0] : data;
           goal.current = Number(payload?.goal_current ?? (oldGoal + amount));
-          if (wallet) wallet.balance = Number(payload?.wallet_balance ?? (oldWallet - amount));
-          else gameWallets.push({ user_email: currentUser.email, family_code: familyCode, balance: Number(payload?.wallet_balance ?? Math.max(0, oldWallet - amount)), updated_at: new Date().toISOString() });
-          this.closeModal();
-          suppressSoftUntil = Date.now() + 1500;
-          renderApp(true);
+          const freshWallet = gameWallets.find(w => w.user_email === currentUser.email && w.family_code === familyCode);
+          if (freshWallet) freshWallet.balance = Number(payload?.wallet_balance ?? (oldWallet - amount));
           if (oldGoal < Number(goal.target || 0) && goal.current >= Number(goal.target || 0)) markGoalCompleted(goal);
-          scheduleSoftRefresh();
+          scheduleSoftRefresh(450);
         } catch (error) {
+          goal.current = oldGoal;
+          const freshWallet = gameWallets.find(w => w.user_email === currentUser.email && w.family_code === familyCode);
+          if (freshWallet) freshWallet.balance = oldWallet;
+          transactions = transactions.filter(t => t.id !== tempTransactionId);
+          gameTransactions = gameTransactions.filter(t => t.id !== tempGameTransactionId);
+          renderApp(true);
           alert('Eroare la retragere: ' + (error.message || error));
           if (btn) { btn.textContent = 'Retrage'; btn.disabled = false; }
         }
