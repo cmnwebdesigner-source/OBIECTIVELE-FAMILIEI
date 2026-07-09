@@ -1037,6 +1037,56 @@
     body.dark-mode .bet-btn { background:rgba(255,255,255,.07); border-color:rgba(255,255,255,.10); color:var(--text); }
     body.dark-mode .bet-btn.active { background:var(--gold); color:#111827; }
 
+  
+
+    /* Task-uri / notificări / istoric lunar */
+    .task-toast {
+      position: fixed;
+      top: calc(env(safe-area-inset-top) + 14px);
+      left: 50%;
+      transform: translateX(-50%) translateY(-14px);
+      width: min(92vw, 390px);
+      z-index: 10000;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .22s ease, transform .22s ease;
+    }
+    .task-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .task-toast-inner {
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding: 11px 13px;
+      border-radius: 18px;
+      background: rgba(255,255,255,.92);
+      border: 1px solid rgba(22,163,74,.20);
+      box-shadow: 0 18px 42px rgba(15,23,42,.16);
+      backdrop-filter: blur(14px);
+    }
+    body.dark-mode .task-toast-inner { background: rgba(15,23,42,.92); border-color: rgba(34,197,94,.22); }
+    .task-toast-icon { width:32px; height:32px; border-radius: 12px; display:flex; align-items:center; justify-content:center; background: rgba(34,197,94,.13); color:#16a34a; flex:0 0 auto; }
+    .task-toast-title { font-size: 12px; color: var(--text); line-height:1.2; }
+    .task-toast-text { font-size: 10px; color: var(--muted); margin-top:2px; }
+    .task-action-card { cursor:pointer; transition: transform .14s ease, border-color .14s ease; }
+    .task-action-card:active { transform: scale(.985); }
+    .task-history-month { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px; border-radius:20px; background: rgba(255,255,255,.72); border:1px solid rgba(15,23,42,.07); }
+    body.dark-mode .task-history-month { background: rgba(255,255,255,.055); border-color: rgba(255,255,255,.08); }
+    .task-day-row { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; padding:11px 12px; border-radius:18px; background: rgba(255,255,255,.78); border:1px solid rgba(15,23,42,.06); }
+    body.dark-mode .task-day-row { background: rgba(255,255,255,.055); border-color: rgba(255,255,255,.07); }
+    .task-chipline { display:flex; flex-wrap:wrap; gap:5px; margin-top:7px; }
+    .task-chip { font-size:10px; padding:4px 7px; border-radius:999px; border:1px solid rgba(148,163,184,.22); color: var(--muted); background: rgba(148,163,184,.08); }
+    .task-chip.done { color:#15803d; border-color: rgba(34,197,94,.24); background: rgba(34,197,94,.11); }
+    .task-chip.missing { color:#dc2626; border-color: rgba(239,68,68,.20); background: rgba(239,68,68,.08); }
+    .calc-save-card { padding: 13px; }
+    .calc-note-inline { margin-top:6px; font-size:11px; line-height:1.35; color: var(--muted); }
+    .calc-note-inline b { color: var(--text); font-weight:500; }
+    .piggy-month-card { padding:12px; border-radius:20px; background:rgba(255,255,255,.74); border:1px solid rgba(15,23,42,.07); }
+    body.dark-mode .piggy-month-card { background:rgba(255,255,255,.055); border-color:rgba(255,255,255,.08); }
+    .piggy-month-days { display:grid; grid-template-columns: repeat(7, 1fr); gap:5px; margin-top:10px; }
+    .piggy-mini-day { min-height:32px; border-radius:10px; border:1px solid rgba(148,163,184,.14); display:flex; align-items:center; justify-content:center; font-size:11px; color:var(--muted); position:relative; background:rgba(148,163,184,.06); }
+    .piggy-mini-day.has { color:var(--text); background:rgba(34,197,94,.10); border-color:rgba(34,197,94,.20); }
+    .piggy-mini-day.has::after { content:''; position:absolute; bottom:4px; width:4px; height:4px; border-radius:999px; background:#16a34a; }
+
   </style>
 </head>
 <body>
@@ -1079,6 +1129,9 @@
     let selectedPartnerProfileEmail = '';
     let selectedMoneyHistoryType = 'offered';
     let selectedMoneyHistoryMonth = '';
+    let selectedTaskHistoryMonth = '';
+    let selectedPiggyHistoryMonth = '';
+    let taskToastTimer = null;
     let gameRooms = [];
     let gameWallets = [];
     let gameTransactions = [];
@@ -1327,9 +1380,11 @@
       transactions = filteredTransactions;
       calculatorHistory = c;
 
+      const firstLoadThisFetch = !dataLoadedOnce;
       if (!dataLoadedOnce) {
         completedNotified = new Set(goals.filter(isGoalDone).map(g => g.id));
         dataLoadedOnce = true;
+        seedTaskNotificationsForToday();
       }
 
       if (render) renderApp(soft);
@@ -1341,6 +1396,7 @@
       if (piggyNeedsConfetti) {
         setTimeout(showConfetti, 160);
       }
+      if (!firstLoadThisFetch) checkNewTaskCompletions();
     }
 
     function setupRealtime() {
@@ -1476,7 +1532,7 @@
           <div class="space-y-3">${commonGoals.length ? commonGoals.map(g => goalCard(g, g.owner === currentUser.email)).join('') : emptyHTML('Niciun obiectiv comun.')}</div>
         </div>
 
-        <div class="section">
+        <div class="section" id="partnerOfferSection">
           <div class="section-head" onclick="window.appActions.openPartnerProfile('${encodeURIComponent(visiblePartnerEmail)}')"><span>Obiectivele ${partnerLabel}</span><small>vezi profil</small></div>
           <div class="space-y-3">${otherGoals.length ? otherGoals.slice(0,2).map(g => goalCard(g, false)).join('') : emptyHTML('Partenerul nu are obiective.')}</div>
         </div>
@@ -1525,7 +1581,35 @@
       </div>`;
     }
 
-    function piggyPageHTML() {
+    
+    function piggyMonthMiniCalendarHTML(month, coinHistory) {
+      const days = monthDays(month).slice().reverse();
+      const hasMap = new Set(coinHistory.map(t => String(t.date || t.timestamp || '').slice(0,10)));
+      const base = new Date((month || todayISO()) + 'T12:00:00');
+      const first = new Date(base.getFullYear(), base.getMonth(), 1, 12);
+      const startOffset = (first.getDay() + 6) % 7;
+      const blanks = Array.from({length:startOffset}, () => '<div></div>').join('');
+      return `<div class="piggy-month-card mb-3">
+        <div class="flex items-center justify-between gap-2">
+          <button class="money-month-nav" onclick="window.appActions.shiftPiggyHistoryMonth(-1)">${svg.back}</button>
+          <div class="text-center"><p class="text-sm capitalize" style="color:var(--text)">${formatMonthTitle(month)}</p><p class="text-[11px] muted">punct verde = monedă adăugată</p></div>
+          <button class="money-month-nav" onclick="window.appActions.shiftPiggyHistoryMonth(1)" style="transform:rotate(180deg)">${svg.back}</button>
+        </div>
+        <div class="piggy-month-days">${blanks}${days.map(d => `<div class="piggy-mini-day ${hasMap.has(d) ? 'has' : ''}">${new Date(d + 'T12:00:00').getDate()}</div>`).join('')}</div>
+      </div>`;
+    }
+
+    function piggyCoinMonthListHTML(month, coinHistory) {
+      const key = monthKeyFromDate(month);
+      const list = coinHistory.filter(t => transactionMonthKey(t) === key);
+      const grouped = {};
+      list.forEach(t => { const d = String(t.date || t.timestamp || '').slice(0,10); (grouped[d] ||= []).push(t); });
+      const days = Object.keys(grouped).sort((a,b)=>b.localeCompare(a));
+      if (!days.length) return emptyHTML('Nu există monede în luna asta.');
+      return days.map(d => `<div class="card"><div class="flex justify-between mb-2"><span class="text-sm capitalize">${formatFullDate(d)}</span><span class="text-sm muted">${grouped[d].length}</span></div><div class="space-y-2">${grouped[d].map(piggyHistoryRow).join('')}</div></div>`).join('');
+    }
+
+function piggyPageHTML() {
       const balance = piggyBalance();
       const info = piggyInfo(balance);
       const history = piggyHistoryTransactions().slice().sort((a,b) => new Date(b.timestamp || b.created_at || 0) - new Date(a.timestamp || a.created_at || 0));
@@ -1562,7 +1646,8 @@
         </div>
         <div class="section">
           <div class="section-head"><span>Istoric monede</span>${coinHistory.length ? `<button class="clear-history-btn" onclick="window.appActions.clearPiggyHistory('coin')">Șterge istoric</button>` : `<small>0</small>`}</div>
-          <div class="space-y-2">${coinHistory.length ? coinHistory.map(piggyHistoryRow).join('') : emptyHTML('Nu există încă monede puse.')}</div>
+          ${piggyMonthMiniCalendarHTML(selectedPiggyHistoryMonth || firstOfMonth(todayISO()), coinHistory)}
+          <div class="space-y-2">${piggyCoinMonthListHTML(selectedPiggyHistoryMonth || firstOfMonth(todayISO()), coinHistory)}</div>
         </div>`;
     }
 
@@ -1670,7 +1755,7 @@
           </div>
           <span class="text-sm" style="color:${totalDay < 0 ? 'var(--danger)' : 'var(--success)'}">${totalDay >= 0 ? '+' : ''}${money(totalDay)} RON</span>
         </div>
-        <div class="section"><div class="section-head"><span>Mișcări</span>${selectedTransactions.length ? `<button class="clear-history-btn" onclick="window.appActions.clearDayHistory(event)">Șterge istoric</button>` : `<small>0</small>`}</div><div class="history-list space-y-2">${selectedTransactions.length ? selectedTransactions.map(transactionRow).join('') : emptyHTML('Nicio mișcare în ziua asta.')}</div></div>`;
+        <div class="section"><div class="section-head"><span></span>${selectedTransactions.length ? `<button class="clear-history-btn" onclick="window.appActions.clearDayHistory(event)">Șterge istoric</button>` : `<small>0</small>`}</div><div class="history-list space-y-2">${selectedTransactions.length ? selectedTransactions.map(transactionRow).join('') : emptyHTML('Nicio mișcare în ziua asta.')}</div></div>`;
     }
 
     function partnerHTML() {
@@ -1797,8 +1882,8 @@
         <div class="top-card mb-4"><p class="muted text-xs">Calculator</p><div class="text-[30px] min-h-[38px] font-medium break-all">${calcResult}</div><p class="muted text-sm break-all">${calcExpression || '0'}</p></div>
         <div class="calc-grid mb-4">${keys.map(k => `<button class="calc-key ${['÷','×','-','+'].includes(k) ? 'op' : k==='C' ? 'clear' : ''}" onclick="window.appActions.calcPress('${k}')">${k}</button>`).join('')}</div>
         <div class="grid grid-cols-2 gap-2 mb-4"><button class="btn btn-soft btn-full" onclick="window.appActions.calcBack()">Șterge</button><button class="btn btn-gold btn-full" onclick="window.appActions.calcEquals()">=</button></div>
-        <div class="card mb-4"><p class="label">Notiță</p><textarea id="calcNoteInput" class="input" rows="2" placeholder="Pentru ce e calculul?"></textarea><button id="saveCalcBtn" class="btn btn-gold btn-full mt-3" onclick="window.appActions.saveCalc()">Salvează Calcul</button></div>
-        <div class="section"><div class="section-head"><span>Calcule salvate</span>${calculatorHistory.length ? `<button class="clear-history-btn" onclick="window.appActions.clearCalculatorHistory()">Șterge istoric</button>` : `<small>0</small>`}</div><div id="calculatorHistoryList" class="space-y-2">${calculatorHistory.length ? calculatorHistory.map(c => `<div class="card"><p class="text-sm">${escapeHTML(c.expression)} = ${escapeHTML(c.result)}</p>${c.note ? `<div class="mt-2 rounded-xl px-3 py-2" style="background:rgba(212,175,55,.12); border:1px solid rgba(212,175,55,.22)"><p class="text-[10px] uppercase tracking-[.12em]" style="color:var(--gold)">Notiță</p><p class="text-xs mt-1" style="color:var(--text)">${escapeHTML(c.note)}</p></div>` : ''}</div>`).join('') : emptyHTML('Nu ai calcule salvate.')}</div></div>`;
+        <div class="card calc-save-card mb-4"><p class="label">Notiță scurtă</p><textarea id="calcNoteInput" class="input" rows="1" placeholder="Ex. cumpărături, datorie, obiectiv..."></textarea><button id="saveCalcBtn" class="btn btn-gold btn-full mt-2" onclick="window.appActions.saveCalc()">Salvează Calcul</button></div>
+        <div class="section"><div class="section-head"><span>Calcule salvate</span>${calculatorHistory.length ? `<button class="clear-history-btn" onclick="window.appActions.clearCalculatorHistory()">Șterge istoric</button>` : `<small>0</small>`}</div><div id="calculatorHistoryList" class="space-y-2">${calculatorHistory.length ? calculatorHistory.map(c => `<div class="card"><p class="text-sm">${escapeHTML(c.expression)} = ${escapeHTML(c.result)}</p>${c.note ? `<p class="calc-note-inline"><b>Notiță:</b> ${escapeHTML(c.note)}</p>` : ''}</div>`).join('') : emptyHTML('Nu ai calcule salvate.')}</div></div>`;
     }
 
     function statsHTML() {
@@ -1886,17 +1971,92 @@
       </div>`;
     }
 
-    function dailyTasksForToday() {
-      const today = todayISO();
-      const createdGoalToday = goals.some(g => goalBelongsToFamily(g) && g.owner === currentUser?.email && String(g.created_at || '').slice(0,10) === today);
-      const offeredToday = visibleTransactions().some(t => transactionBelongsToFamily(t) && !isPiggyTransaction(t) && Number(t.amount || 0) > 0 && String(t.date || t.timestamp || '').slice(0,10) === today && t.from_role === currentUser?.email && t.to_role !== currentUser?.email);
-      const piggyToday = visibleTransactions().some(t => transactionBelongsToFamily(t) && isPiggyTransaction(t) && Number(t.amount || 0) > 0 && String(t.date || t.timestamp || '').slice(0,10) === today);
+    function dailyTasksForDate(dateStr) {
+      const day = String(dateStr || todayISO()).slice(0,10);
+      const createdGoalToday = goals.some(g => goalBelongsToFamily(g) && g.owner === currentUser?.email && String(g.created_at || '').slice(0,10) === day);
+      const offeredToday = visibleTransactions().some(t => transactionBelongsToFamily(t) && !isPiggyTransaction(t) && Number(t.amount || 0) > 0 && String(t.date || t.timestamp || '').slice(0,10) === day && t.from_role === currentUser?.email && t.to_role !== currentUser?.email);
+      const piggyToday = visibleTransactions().some(t => transactionBelongsToFamily(t) && isPiggyTransaction(t) && Number(t.amount || 0) > 0 && String(t.date || t.timestamp || '').slice(0,10) === day);
       const partnerText = getRole(currentUser?.email) === 'sot' ? 'soției' : 'soțului';
       return [
         { id:'goal', done: createdGoalToday, title:'Adaugă un obiectiv', text:'Creează azi un obiectiv personal sau comun.', icon: svg.plus },
         { id:'offer', done: offeredToday, title:'Oferă partenerului', text:`Pune bani azi la un obiectiv al ${partnerText}.`, icon: svg.home },
         { id:'piggy', done: piggyToday, title:'Pușculița zilei', text:'Adaugă o monedă în pușculița voastră.', icon: svg.pig }
       ];
+    }
+
+    function dailyTasksForToday() { return dailyTasksForDate(todayISO()); }
+
+    function taskNotifyStorageKey(dateStr, id) {
+      return `task_done_notice:${familyCode || DEFAULT_FAMILY_CODE}:${currentUser?.email || 'user'}:${dateStr}:${id}`;
+    }
+
+    function seedTaskNotificationsForToday() {
+      const day = todayISO();
+      dailyTasksForToday().filter(t => t.done).forEach(t => localStorage.setItem(taskNotifyStorageKey(day, t.id), '1'));
+    }
+
+    function taskCheckIcon() {
+      return '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4 4L19 6.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    }
+
+    function showTaskToast(title) {
+      document.getElementById('taskToast')?.remove();
+      clearTimeout(taskToastTimer);
+      const el = document.createElement('div');
+      el.id = 'taskToast';
+      el.className = 'task-toast';
+      el.innerHTML = `<div class="task-toast-inner"><div class="task-toast-icon">${taskCheckIcon()}</div><div><p class="task-toast-title">Felicitări, ai finalizat taskul</p><p class="task-toast-text">${escapeHTML(title)}</p></div></div>`;
+      document.body.appendChild(el);
+      requestAnimationFrame(() => el.classList.add('show'));
+      taskToastTimer = setTimeout(() => {
+        el.classList.remove('show');
+        setTimeout(() => el.remove(), 260);
+      }, 2800);
+    }
+
+    function checkNewTaskCompletions() {
+      if (!currentUser || !dataLoadedOnce) return;
+      const day = todayISO();
+      dailyTasksForToday().filter(t => t.done).forEach(t => {
+        const key = taskNotifyStorageKey(day, t.id);
+        if (!localStorage.getItem(key)) {
+          localStorage.setItem(key, '1');
+          if (currentPage !== 'tasks') showTaskToast(t.title);
+          setTimeout(showConfetti, 80);
+        }
+      });
+    }
+
+    function monthDays(dateStr) {
+      const base = new Date((dateStr || todayISO()) + 'T12:00:00');
+      const y = base.getFullYear();
+      const m = base.getMonth();
+      const count = new Date(y, m + 1, 0).getDate();
+      const today = todayISO();
+      const out = [];
+      for (let d = 1; d <= count; d++) {
+        const iso = new Date(y, m, d, 12).toISOString().split('T')[0];
+        if (iso <= today) out.push(iso);
+      }
+      return out.reverse();
+    }
+
+    function taskMonthHistoryHTML() {
+      const month = selectedTaskHistoryMonth || firstOfMonth(todayISO());
+      const days = monthDays(month);
+      return `<div class="section">
+        <div class="section-head"><span>Istoric task-uri</span><small class="capitalize">${formatMonthTitle(month)}</small></div>
+        <div class="task-history-month mb-3">
+          <button class="money-month-nav" onclick="window.appActions.shiftTaskHistoryMonth(-1)">${svg.back}</button>
+          <div class="text-center min-w-0"><p class="text-sm capitalize" style="color:var(--text)">${formatMonthTitle(month)}</p><p class="text-[11px] muted">finalizate și nefinalizate</p></div>
+          <button class="money-month-nav" onclick="window.appActions.shiftTaskHistoryMonth(1)" style="transform:rotate(180deg)">${svg.back}</button>
+        </div>
+        <div class="space-y-2">${days.length ? days.map(day => {
+          const list = dailyTasksForDate(day);
+          const doneCount = list.filter(t => t.done).length;
+          return `<div class="task-day-row"><div class="min-w-0"><p class="text-sm capitalize" style="color:var(--text)">${formatFullDate(day)}</p><div class="task-chipline">${list.map(t => `<span class="task-chip ${t.done ? 'done' : 'missing'}">${escapeHTML(t.title)} · ${t.done ? 'gata' : 'nefăcut'}</span>`).join('')}</div></div><span class="text-xs muted whitespace-nowrap">${doneCount}/3</span></div>`;
+        }).join('') : emptyHTML('Nu există zile în luna asta.')}</div>
+      </div>`;
     }
 
     function tasksPageHTML() {
@@ -1919,16 +2079,17 @@
         <div class="section">
           <div class="section-head"><span>Azi</span><small>${formatFullDate(todayISO())}</small></div>
           <div class="space-y-3">
-            ${list.map(item => `<div class="card" style="padding:13px 14px; display:flex; align-items:center; gap:12px;">
-              <div class="icon-btn" style="flex:0 0 auto; ${item.done ? 'background:rgba(34,197,94,.13); color:#16a34a;' : ''}">${item.done ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4 4L19 6.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>' : item.icon}</div>
+            ${list.map(item => `<button class="card task-action-card" onclick="window.appActions.openTaskAction('${item.id}')" style="width:100%; padding:13px 14px; display:flex; align-items:center; gap:12px; text-align:left;">
+              <div class="icon-btn" style="flex:0 0 auto; ${item.done ? 'background:rgba(34,197,94,.13); color:#16a34a;' : ''}">${item.done ? taskCheckIcon() : item.icon}</div>
               <div class="min-w-0 flex-1">
                 <p class="text-sm" style="color:var(--text)">${escapeHTML(item.title)}</p>
                 <p class="text-xs muted mt-1">${escapeHTML(item.text)}</p>
               </div>
-              <span class="text-[11px]" style="color:${item.done ? '#16a34a' : 'var(--muted)'}">${item.done ? 'Gata' : 'Azi'}</span>
-            </div>`).join('')}
+              <span class="text-[11px]" style="color:${item.done ? '#16a34a' : 'var(--muted)'}">${item.done ? 'Gata' : 'Deschide'}</span>
+            </button>`).join('')}
           </div>
-        </div>`;
+        </div>
+        ${taskMonthHistoryHTML()}`;
     }
 
     function moneyHistoryPageHTML() {
@@ -2435,7 +2596,19 @@
       openCalculator() { previousPage = currentPage; currentPage = 'calculator'; renderApp(); },
       openCalendar() { previousPage = currentPage; currentPage = 'calendar'; renderApp(); },
       openPiggy() { previousPage = currentPage; currentPage = 'piggy'; renderApp(); },
-      openTasks() { previousPage = currentPage; currentPage = 'tasks'; renderApp(); },
+      openTasks() { previousPage = currentPage; currentPage = 'tasks'; selectedTaskHistoryMonth = selectedTaskHistoryMonth || firstOfMonth(todayISO()); renderApp(); },
+      openTaskAction(id) {
+        if (id === 'goal') return this.openAddGoal();
+        if (id === 'piggy') return this.openPiggy();
+        if (id === 'offer') {
+          previousPage = 'tasks';
+          currentPage = 'home';
+          renderApp();
+          requestAnimationFrame(() => document.getElementById('partnerOfferSection')?.scrollIntoView({ behavior:'smooth', block:'start' }));
+        }
+      },
+      shiftTaskHistoryMonth(months) { selectedTaskHistoryMonth = shiftMonth(selectedTaskHistoryMonth || firstOfMonth(todayISO()), months); renderApp(); },
+      shiftPiggyHistoryMonth(months) { selectedPiggyHistoryMonth = shiftMonth(selectedPiggyHistoryMonth || firstOfMonth(todayISO()), months); renderApp(); },
       openFlappyLobby() {
         const active = gameRoomsForMe().find(r => ['invite','accepted','countdown','playing'].includes(r.status));
         selectedGameRoomId = active ? active.id : '';
@@ -2515,6 +2688,7 @@
           if (direct.data) goals = goals.map(g => g.id === localGoal.id ? direct.data : g);
           suppressSoftUntil = Date.now() + 1300;
           renderApp(true);
+          checkNewTaskCompletions();
           scheduleSoftRefresh();
         } catch (error) {
           if (localGoal) goals = goals.filter(g => g.id !== localGoal.id);
@@ -2651,6 +2825,7 @@
           if (tr.data) transactions = transactions.map(t => t.id === localTransaction.id ? tr.data : t);
           suppressSoftUntil = Date.now() + 1600;
           if (old < target && finalAmount >= target) markGoalCompleted(g);
+          checkNewTaskCompletions();
           scheduleSoftRefresh();
         } catch (error) {
           g.current = old;
@@ -2689,6 +2864,7 @@
         transactions.unshift(localTransaction);
         suppressSoftUntil = Date.now() + 1200;
         renderApp(true);
+        checkNewTaskCompletions();
         if (milestoneReached) setTimeout(showConfetti, 120);
 
         piggySaveQueue = piggySaveQueue.catch(() => {}).then(async () => {
