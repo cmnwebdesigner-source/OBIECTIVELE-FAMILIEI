@@ -27,6 +27,9 @@
         .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
         .calendar-strip { scroll-snap-type: x mandatory; }
         .calendar-day { scroll-snap-align: center; }
+        .calendar-touch-zone { touch-action: pan-y; }
+        .calendar-days-track { will-change: transform; transition: transform .22s ease; }
+        .calendar-days-track.dragging { transition: none; }
         .goal-card { transition: transform .15s ease, box-shadow .15s ease; }
         .goal-card:active { transform: scale(.985); }
         .confetti-piece {
@@ -72,6 +75,10 @@
         let calcExpression = '';
         let calcResult = '0';
         let touchStartX = 0;
+        let touchCurrentX = 0;
+        let calendarDragging = false;
+        let calendarSwipeBlockClickUntil = 0;
+        let softRefreshTimer = null;
         window.selectedSignupRole = 'sot';
 
         const appContainer = document.getElementById('app');
@@ -187,8 +194,22 @@
             });
         };
 
-        const fetchData = async () => {
+        const renderMainSoft = () => {
+            const modalOpen = (document.getElementById('modalContainer')?.innerHTML || '').trim().length > 0;
+            if (modalOpen) return;
+            const scroller = appContainer.querySelector('[data-scroll-area="true"]');
+            const scrollTop = scroller ? scroller.scrollTop : 0;
+            renderMain();
+            requestAnimationFrame(() => {
+                const newScroller = appContainer.querySelector('[data-scroll-area="true"]');
+                if (newScroller) newScroller.scrollTop = scrollTop;
+            });
+        };
+
+        const fetchData = async (options = {}) => {
             if (!currentUser) return;
+            const shouldRender = options.render !== false;
+            const soft = options.soft === true;
             const [goalsData, transData, profileData, calcData] = await Promise.all([
                 safeFetch('goals', supabase.from('goals').select('*').order('created_at', { ascending: false })),
                 safeFetch('transactions', supabase.from('transactions').select('*').order('timestamp', { ascending: false })),
@@ -199,16 +220,24 @@
             transactions = transData;
             profiles = profileData;
             calculatorHistory = calcData;
-            renderMain();
+            if (shouldRender) {
+                if (soft) renderMainSoft();
+                else renderMain();
+            }
+        };
+
+        const scheduleSoftFetch = () => {
+            clearTimeout(softRefreshTimer);
+            softRefreshTimer = setTimeout(() => fetchData({ soft: true }), 350);
         };
 
         const setupRealtime = () => {
             if (realTimeSubscription) supabase.removeChannel(realTimeSubscription);
             realTimeSubscription = supabase.channel('public-changes')
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'goals' }, () => fetchData())
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, () => fetchData())
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => fetchData())
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'calculator_history' }, () => fetchData())
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'goals' }, scheduleSoftFetch)
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, scheduleSoftFetch)
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, scheduleSoftFetch)
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'calculator_history' }, scheduleSoftFetch)
                 .subscribe();
         };
 
@@ -269,7 +298,7 @@
             else content = getHomeHTML();
 
             appContainer.innerHTML = `
-                <div class="flex-1 overflow-y-auto hide-scroll ${showNav ? 'pb-24' : 'pb-6'} p-4 md:p-6 fade-in h-full">
+                <div data-scroll-area="true" class="flex-1 overflow-y-auto hide-scroll ${showNav ? 'pb-24' : 'pb-6'} p-4 md:p-6 fade-in h-full">
                     ${content}
                 </div>
                 ${showNav ? getBottomNavHTML() : ''}
@@ -356,25 +385,27 @@
         const getCalendarHTML = () => {
             const days = [-3, -2, -1, 0, 1, 2, 3].map(offset => addDays(selectedDate, offset));
             return `
-                <div class="mb-4 select-none" ontouchstart="window.appActions.calendarTouchStart(event)" ontouchend="window.appActions.calendarTouchEnd(event)">
+                <div class="mb-4 select-none calendar-touch-zone" onpointerdown="window.appActions.calendarSwipeStart(event)" onpointermove="window.appActions.calendarSwipeMove(event)" onpointerup="window.appActions.calendarSwipeEnd(event)" onpointercancel="window.appActions.calendarSwipeCancel(event)">
                     <div class="flex items-center justify-between mb-3">
                         <button onclick="window.appActions.shiftDate(-1)" class="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-200"><i class="fas fa-chevron-left text-xs"></i></button>
-                        <div class="text-center">
+                        <div class="text-center px-2">
                             <p class="text-sm font-bold text-slate-800 dark:text-white capitalize">${formatFullDate(selectedDate)}</p>
                         </div>
                         <button onclick="window.appActions.shiftDate(1)" class="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-200"><i class="fas fa-chevron-right text-xs"></i></button>
                     </div>
-                    <div class="calendar-strip flex gap-2 overflow-x-auto hide-scroll pb-1">
-                        ${days.map(d => {
-                            const active = d === selectedDate;
-                            const dateObj = new Date(d + 'T12:00:00');
-                            return `
-                                <button onclick="window.appActions.changeDate('${d}')" class="calendar-day min-w-[62px] py-2 rounded-2xl border transition-all ${active ? 'bg-indigo-600 border-indigo-600 text-white shadow-md' : 'bg-slate-50 dark:bg-slate-700 border-slate-100 dark:border-slate-600 text-slate-600 dark:text-slate-200'}">
-                                    <span class="block text-[10px] uppercase font-bold opacity-75">${dateObj.toLocaleDateString('ro-RO', { weekday: 'short' })}</span>
-                                    <span class="block text-lg font-black leading-5">${dateObj.getDate()}</span>
-                                </button>
-                            `;
-                        }).join('')}
+                    <div class="overflow-hidden pb-1">
+                        <div id="calendarDaysTrack" class="calendar-days-track flex gap-2">
+                            ${days.map(d => {
+                                const active = d === selectedDate;
+                                const dateObj = new Date(d + 'T12:00:00');
+                                return `
+                                    <button onclick="window.appActions.changeDate('${d}')" class="calendar-day flex-1 min-w-0 py-2 rounded-2xl border transition-all ${active ? 'bg-indigo-600 border-indigo-600 text-white shadow-md scale-[1.02]' : 'bg-slate-50 dark:bg-slate-700 border-slate-100 dark:border-slate-600 text-slate-600 dark:text-slate-200'}">
+                                        <span class="block text-[10px] uppercase font-bold opacity-75">${dateObj.toLocaleDateString('ro-RO', { weekday: 'short' })}</span>
+                                        <span class="block text-lg font-black leading-5">${dateObj.getDate()}</span>
+                                    </button>
+                                `;
+                            }).join('')}
+                        </div>
                     </div>
                 </div>
             `;
@@ -700,12 +731,52 @@
             goBack: () => { currentTab = previousTab && previousTab !== currentTab ? previousTab : 'home'; renderMain(); },
             openCalculator: () => { previousTab = currentTab; currentTab = 'calculator'; renderMain(); },
             openGoalStats: (goalId) => { selectedGoalId = goalId; previousTab = currentTab; currentTab = 'goalStats'; renderMain(); },
-            changeDate: (date) => { selectedDate = date; renderMain(); },
-            shiftDate: (days) => { selectedDate = addDays(selectedDate, days); renderMain(); },
-            calendarTouchStart: (e) => { touchStartX = e.changedTouches[0].screenX; },
-            calendarTouchEnd: (e) => {
-                const diff = e.changedTouches[0].screenX - touchStartX;
-                if (Math.abs(diff) > 45) window.appActions.shiftDate(diff < 0 ? 1 : -1);
+            changeDate: (date) => {
+                if (Date.now() < calendarSwipeBlockClickUntil) return;
+                selectedDate = date;
+                renderMain();
+            },
+            shiftDate: (days) => {
+                selectedDate = addDays(selectedDate, days);
+                renderMain();
+            },
+            calendarSwipeStart: (e) => {
+                if (e.target.closest('button')) return;
+                calendarDragging = true;
+                touchStartX = e.clientX;
+                touchCurrentX = e.clientX;
+                const track = document.getElementById('calendarDaysTrack');
+                if (track) track.classList.add('dragging');
+                try { e.currentTarget.setPointerCapture(e.pointerId); } catch (_) {}
+            },
+            calendarSwipeMove: (e) => {
+                if (!calendarDragging) return;
+                touchCurrentX = e.clientX;
+                const diff = touchCurrentX - touchStartX;
+                const track = document.getElementById('calendarDaysTrack');
+                if (track) track.style.transform = `translateX(${Math.max(-85, Math.min(85, diff))}px)`;
+            },
+            calendarSwipeEnd: (e) => {
+                if (!calendarDragging) return;
+                calendarDragging = false;
+                const diff = (e.clientX || touchCurrentX) - touchStartX;
+                const track = document.getElementById('calendarDaysTrack');
+                if (track) {
+                    track.classList.remove('dragging');
+                    track.style.transform = '';
+                }
+                if (Math.abs(diff) > 35) {
+                    calendarSwipeBlockClickUntil = Date.now() + 350;
+                    window.appActions.shiftDate(diff < 0 ? 1 : -1);
+                }
+            },
+            calendarSwipeCancel: () => {
+                calendarDragging = false;
+                const track = document.getElementById('calendarDaysTrack');
+                if (track) {
+                    track.classList.remove('dragging');
+                    track.style.transform = '';
+                }
             },
             closeModal: () => { document.getElementById('modalContainer').innerHTML = ''; },
             toggleTheme: () => {
@@ -796,7 +867,7 @@
                 if (data) goals.unshift(data);
                 window.appActions.closeModal();
                 renderMain();
-                fetchData();
+                scheduleSoftFetch();
             },
             openMoneyModal: (goalId, mode) => {
                 const goal = goals.find(g => g.id === goalId);
@@ -826,11 +897,22 @@
                 if (mode === 'remove_self' && goal.owner !== currentUser.email) return alert('Poți scoate bani doar din obiectivul tău.');
                 const signedAmount = mode === 'remove_self' ? -amountRaw : amountRaw;
                 const oldAmount = Number(goal.current || 0);
-                const newAmount = Math.max(0, oldAmount + signedAmount);
                 const btn = document.getElementById('moneyActionBtn');
                 btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; btn.disabled = true;
-                const { error: updateError } = await supabase.from('goals').update({ current: newAmount }).eq('id', goalId);
-                if (updateError) { alert('Eroare: ' + updateError.message); window.appActions.closeModal(); return; }
+
+                let newAmount = Math.max(0, oldAmount + signedAmount);
+                const { data: rpcAmount, error: rpcError } = await supabase.rpc('adjust_goal_amount', {
+                    p_goal_id: goalId,
+                    p_delta: signedAmount
+                });
+
+                if (rpcError) {
+                    const { error: updateError } = await supabase.from('goals').update({ current: newAmount }).eq('id', goalId);
+                    if (updateError) { alert('Eroare: ' + updateError.message); window.appActions.closeModal(); return; }
+                } else if (rpcAmount !== null && rpcAmount !== undefined) {
+                    newAmount = Number(rpcAmount);
+                }
+
                 const { error: transError } = await supabase.from('transactions').insert([{
                     goal_id: goalId,
                     goal_title: goal.title,
@@ -845,7 +927,7 @@
                 window.appActions.closeModal();
                 renderMain();
                 if (oldAmount < Number(goal.target || 0) && newAmount >= Number(goal.target || 0)) showConfetti();
-                fetchData();
+                scheduleSoftFetch();
             },
             calcPress: (v) => {
                 if (v === 'C') { calcExpression = ''; calcResult = '0'; renderMain(); return; }
@@ -872,7 +954,7 @@
                 btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; btn.disabled = true;
                 const { error } = await supabase.from('calculator_history').insert([{ user_email: currentUser.email, expression: calcExpression, result: calcResult, note }]);
                 if (error) { alert('Eroare la salvare: ' + error.message); btn.innerHTML = 'Salvează Calcul'; btn.disabled = false; return; }
-                await fetchData();
+                await fetchData({ soft: true });
             }
         };
 
