@@ -201,6 +201,54 @@
       border-color: rgba(134,239,172,.20);
     }
 
+
+    .completed-contributions {
+      margin-top: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+    }
+    .contribution-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 6px 9px;
+      border-radius: 999px;
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: .02em;
+      color: #166534;
+      background: rgba(22,163,74,.10);
+      border: 1px solid rgba(22,163,74,.18);
+      white-space: nowrap;
+    }
+    .contribution-chip.partner-wife {
+      color: #b91c1c;
+      background: rgba(239,68,68,.10);
+      border-color: rgba(239,68,68,.18);
+    }
+    .contribution-chip.partner-husband {
+      color: #1d4ed8;
+      background: rgba(37,99,235,.10);
+      border-color: rgba(37,99,235,.18);
+    }
+    body.dark-mode .contribution-chip {
+      color: #86efac;
+      background: rgba(22,163,74,.14);
+      border-color: rgba(134,239,172,.18);
+    }
+    body.dark-mode .contribution-chip.partner-wife {
+      color: #fca5a5;
+      background: rgba(239,68,68,.15);
+      border-color: rgba(252,165,165,.18);
+    }
+    body.dark-mode .contribution-chip.partner-husband {
+      color: #93c5fd;
+      background: rgba(37,99,235,.16);
+      border-color: rgba(147,197,253,.18);
+    }
+
     .btn {
       border-radius: 14px;
       padding: 10px 12px;
@@ -629,13 +677,17 @@
       margin-top: 8px;
       padding: 8px 10px;
       border-radius: 14px;
+      width: 50%;
+      min-width: 150px;
+      max-width: 190px;
+      box-shadow: 0 8px 18px rgba(15,23,42,.045), inset 0 1px 0 rgba(255,255,255,.85);
     }
     .family-code-row { display:grid; grid-template-columns: minmax(0, 1fr) auto; gap:7px; align-items:end; }
     .family-code-card .label { font-size: 10px; margin-bottom: 3px; }
     .family-code-card .input { padding: 8px 10px; border-radius: 11px; font-size: 12px; min-height: 36px; }
     .family-code-card .btn { padding: 8px 10px; border-radius: 11px; white-space: nowrap; min-height: 36px; font-size: 12px; }
     .family-code-lock { display:block; }
-    .family-code-value { display:flex; align-items:center; justify-content:flex-start; width:100%; min-height:34px; padding:7px 10px; border-radius:12px; background:rgba(100,116,139,.10); border:1px solid rgba(100,116,139,.14); font-size:13px; letter-spacing:.12em; color:#64748b; }
+    .family-code-value { display:flex; align-items:center; justify-content:center; width:100%; min-height:32px; padding:6px 10px; border-radius:11px; background:rgba(100,116,139,.10); border:1px solid rgba(100,116,139,.14); font-size:13px; letter-spacing:.12em; color:#64748b; }
     .family-save-status { display:none; }
     body.dark-mode .family-code-value { background:rgba(148,163,184,.10); border-color:rgba(148,163,184,.14); color:#cbd5e1; }
     .family-code-note { display:none; }
@@ -984,6 +1036,28 @@
         </div>`;
     }
 
+
+    function completedContributionHTML(goal) {
+      const current = Number(goal.current || 0);
+      const target = Number(goal.target || 1);
+      if (current < target) return '';
+      const sums = {};
+      transactions
+        .filter(t => transactionBelongsToFamily(t) && t.goal_id === goal.id && Number(t.amount || 0) > 0)
+        .forEach(t => {
+          const email = t.from_role || 'necunoscut';
+          sums[email] = (sums[email] || 0) + Number(t.amount || 0);
+        });
+      const entries = Object.entries(sums).filter(([, value]) => value > 0).sort((a, b) => b[1] - a[1]);
+      if (!entries.length) return '';
+      return `<div class="completed-contributions">${entries.map(([email, value]) => {
+        const role = getRole(email);
+        const cls = role === 'sotie' ? 'partner-wife' : role === 'sot' ? 'partner-husband' : '';
+        const label = roleLabel(role).toUpperCase();
+        return `<span class="contribution-chip ${cls}">${escapeHTML(label)} +${money(value)} RON</span>`;
+      }).join('')}</div>`;
+    }
+
     function goalCard(goal, isMine) {
       const current = Number(goal.current || 0);
       const target = Number(goal.target || 1);
@@ -1005,6 +1079,7 @@
             <p class="goal-money">${money(current)} RON <span class="muted">din ${money(target)} RON</span></p>
           </div>
           <div class="progress ${goal.owner !== currentUser.email ? 'partner' : ''} ${done ? 'done' : ''}"><span style="width:${percent}%"></span></div>
+          ${done ? completedContributionHTML(goal) : ''}
           <div class="flex items-center justify-between mt-3 gap-3">
             <span class="text-xs muted shrink-0">${percent}%</span>
             <div class="flex gap-2 flex-wrap justify-end">
@@ -1205,7 +1280,7 @@
       const dates = Object.keys(byDate).sort((a,b) => b.localeCompare(a));
       return `
         ${backButton()}
-        <div class="top-card mb-4"><p class="muted text-xs">Statistici</p><h2 class="text-2xl font-medium tracking-[-.03em]">${escapeHTML(String(goal.title || '').toUpperCase())}</h2><p class="muted text-sm mt-1">${money(current)} din ${money(target)} RON</p><div class="progress mt-4 ${percent>=100?'done':''}"><span style="width:${percent}%"></span></div>${goal.owner === currentUser.email ? `<button class="btn btn-soft btn-full mt-3" onclick="window.appActions.openEditGoal('${goal.id}')">Editează obiectivul</button>` : ''}</div>
+        <div class="top-card mb-4"><p class="muted text-xs">Statistici</p><h2 class="text-2xl font-medium tracking-[-.03em]">${escapeHTML(String(goal.title || '').toUpperCase())}</h2><p class="muted text-sm mt-1">${money(current)} din ${money(target)} RON</p><div class="progress mt-4 ${percent>=100?'done':''}"><span style="width:${percent}%"></span></div>${percent >= 100 ? completedContributionHTML(goal) : ''}${goal.owner === currentUser.email && percent < 100 ? `<button class="btn btn-soft btn-full mt-3" onclick="window.appActions.openEditGoal('${goal.id}')">Editează obiectivul</button>` : ''}</div>
         <div class="stat-grid mb-4"><div class="stat-mini"><span>Pus</span><b>${money(added)}</b></div><div class="stat-mini"><span>Scos</span><b>${money(removed)}</b></div><div class="stat-mini"><span>Mișcări</span><b>${list.length}</b></div></div>
         <div class="section"><div class="section-head"><span>Pe zile</span></div><div class="space-y-3">${dates.length ? dates.map(d => `<div class="card"><div class="flex justify-between mb-2"><span class="text-sm capitalize">${formatFullDate(d)}</span><span class="text-sm muted">${byDate[d].length}</span></div><div class="space-y-2">${byDate[d].map(transactionRow).join('')}</div></div>`).join('') : emptyHTML('Nu există încă statistici.')}</div></div>`;
     }
