@@ -16,11 +16,6 @@ self.addEventListener('push', (event) => {
     body: data.body || 'Ai o notificare nouă.',
     icon: data.icon || '/icon-192.png',
     badge: data.badge || '/icon-192.png',
-    // Un singur loc pentru notificările aplicației:
-    // nu se adună notificări peste notificări.
-    tag: data.tag || 'familie-notificare',
-    // Dar fiecare notificare nouă trebuie să aprindă iar bannerul/sunetul.
-    renotify: true,
     requireInteraction: false,
     data: {
       url: data.url || '/'
