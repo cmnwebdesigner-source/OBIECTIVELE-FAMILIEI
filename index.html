@@ -849,15 +849,6 @@
     .piggy-history-amount.add { color:#16a34a; }
     .piggy-history-amount.break { color:#ef4444; }
 
-    body.dark-mode .piggy-icon-box,    body.dark-mode .piggy-card,
-    body.dark-mode .coin-btn {
-      background:rgba(15,23,42,.86);
-      border-color:rgba(255,255,255,.10);
-      box-shadow:0 16px 38px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.04);
-      color:var(--text);
-    }
-    body.dark-mode .piggy-progress-line, body.dark-mode .piggy-progress-big { background:rgba(255,255,255,.08); }
-
     .piggy-flying-coin {
       position: fixed;
       z-index: 10000;
@@ -884,6 +875,15 @@
       78% { opacity: 1; transform: translate(calc(-50% + var(--coin-x)), calc(-50% + var(--coin-y))) scale(.72) rotate(340deg); }
       100% { opacity: 0; transform: translate(calc(-50% + var(--coin-x)), calc(-50% + var(--coin-y))) scale(.28) rotate(430deg); }
     }
+
+    body.dark-mode .piggy-icon-box,    body.dark-mode .piggy-card,
+    body.dark-mode .coin-btn {
+      background:rgba(15,23,42,.86);
+      border-color:rgba(255,255,255,.10);
+      box-shadow:0 16px 38px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.04);
+      color:var(--text);
+    }
+    body.dark-mode .piggy-progress-line, body.dark-mode .piggy-progress-big { background:rgba(255,255,255,.08); }
 
     body.dark-mode .piggy-page-card, body.dark-mode .piggy-history-row { background:rgba(15,23,42,.86); border-color:rgba(255,255,255,.10); box-shadow:0 16px 38px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.04); }
     body.dark-mode .piggy-big-icon { background:rgba(255,255,255,.08); border-color:rgba(255,255,255,.10); color:var(--text); }
@@ -926,6 +926,7 @@
     let dataLoadedOnce = false;
     let familyCode = '';
     let familyCodeStatus = '';
+    let piggySaveQueue = Promise.resolve();
     let selectedGoalListKind = '';
     let selectedGoalListEmail = '';
     const DEFAULT_FAMILY_CODE = '0706';
@@ -1258,10 +1259,11 @@
       const isBreak = amount < 0;
       const title = isBreak ? 'Pușculiță spartă' : 'Monedă adăugată';
       const date = new Date(t.timestamp || t.created_at || Date.now()).toLocaleString('ro-RO', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
+      const detail = isBreak ? 'Resetare la 0' : 'Adăugare în pușculiță';
       return `<div class="piggy-history-row">
         <div class="min-w-0">
           <p class="piggy-history-title">${escapeHTML(title)}</p>
-          <p class="piggy-history-date">${date}</p>
+          <p class="piggy-history-date">${escapeHTML(detail)} • ${date}</p>
         </div>
         <span class="piggy-history-amount ${isBreak ? 'break' : 'add'}">${isBreak ? '-' : '+'}${money(Math.abs(amount))} RON</span>
       </div>`;
@@ -1271,6 +1273,8 @@
       const balance = piggyBalance();
       const info = piggyInfo(balance);
       const history = piggyTransactions().slice().sort((a,b) => new Date(b.timestamp || b.created_at || 0) - new Date(a.timestamp || a.created_at || 0));
+      const breakHistory = history.filter(t => Number(t.amount || 0) < 0);
+      const coinHistory = history.filter(t => Number(t.amount || 0) > 0);
       const milestones = PIGGY_MILESTONES.map(m => {
         const cls = balance >= m.target ? 'done' : (m.target === info.nextTarget ? 'next' : '');
         return `<span class="milestone-chip ${cls}">${m.target} lei</span>`;
@@ -1290,15 +1294,19 @@
           <p class="text-xs muted mb-3">${escapeHTML(info.message)}</p>
           <div class="milestone-row mb-3">${milestones}</div>
           <div class="piggy-coin-grid">
-            <button class="coin-btn" onclick="window.appActions.addPiggyCoin(0.01, event)"><span class="coin-dot"></span>1 ban</button>
-            <button class="coin-btn" onclick="window.appActions.addPiggyCoin(0.10, event)"><span class="coin-dot"></span>10 bani</button>
-            <button class="coin-btn" onclick="window.appActions.addPiggyCoin(0.50, event)"><span class="coin-dot"></span>50 bani</button>
+            <button class="coin-btn" onclick="window.appActions.addPiggyCoin(1, event)"><span class="coin-dot"></span>1 ban</button>
+            <button class="coin-btn" onclick="window.appActions.addPiggyCoin(10, event)"><span class="coin-dot"></span>10 bani</button>
+            <button class="coin-btn" onclick="window.appActions.addPiggyCoin(50, event)"><span class="coin-dot"></span>50 bani</button>
           </div>
           <button class="piggy-break-btn" ${balance <= 0 ? 'disabled' : ''} onclick="window.appActions.breakPiggy()">${svg.pig} Sparge pușculița</button>
         </div>
         <div class="section">
-          <div class="section-head"><span>Istoric pușculiță</span><small>${history.length}</small></div>
-          <div class="space-y-2">${history.length ? history.map(piggyHistoryRow).join('') : emptyHTML('Nu există încă monede puse.')}</div>
+          <div class="section-head"><span>Pușculițe sparte</span><small>${breakHistory.length}</small></div>
+          <div class="space-y-2">${breakHistory.length ? breakHistory.map(piggyHistoryRow).join('') : emptyHTML('Nu ai spart încă pușculița.')}</div>
+        </div>
+        <div class="section">
+          <div class="section-head"><span>Istoric monede</span><small>${coinHistory.length}</small></div>
+          <div class="space-y-2">${coinHistory.length ? coinHistory.map(piggyHistoryRow).join('') : emptyHTML('Nu există încă monede puse.')}</div>
         </div>`;
     }
 
@@ -1632,26 +1640,7 @@
       }
     }
 
-    function animatePiggyCoin(event, amount) {
-      try {
-        const startRect = event?.currentTarget?.getBoundingClientRect?.();
-        const target = document.querySelector('.piggy-big-icon') || document.querySelector('.piggy-icon-box') || document.querySelector('.piggy-card');
-        const targetRect = target?.getBoundingClientRect?.();
-        const startX = startRect ? startRect.left + startRect.width / 2 : window.innerWidth / 2;
-        const startY = startRect ? startRect.top + startRect.height / 2 : window.innerHeight / 2;
-        const endX = targetRect ? targetRect.left + targetRect.width / 2 : window.innerWidth / 2;
-        const endY = targetRect ? targetRect.top + targetRect.height / 2 : 120;
-        const coin = document.createElement('div');
-        coin.className = 'piggy-flying-coin';
-        coin.textContent = amount >= 0.5 ? '50' : amount >= 0.1 ? '10' : '1';
-        coin.style.left = startX + 'px';
-        coin.style.top = startY + 'px';
-        coin.style.setProperty('--coin-x', (endX - startX) + 'px');
-        coin.style.setProperty('--coin-y', (endY - startY) + 'px');
-        document.body.appendChild(coin);
-        setTimeout(() => coin.remove(), 850);
-      } catch (_) {}
-    }
+    function animatePiggyCoin() {}
 
     window.appActions = {
       toggleAuthMode: authHTML,
@@ -1886,25 +1875,31 @@
       },
 
       async addPiggyCoin(amount, event) {
-        const value = fromCents(toCents(amount));
-        if (!currentUser || !Number.isFinite(value) || value <= 0) return;
-        animatePiggyCoin(event, value);
+        const raw = Number(amount);
+        const cents = raw >= 1 ? Math.round(raw) : toCents(raw);
+        const value = fromCents(cents);
+        if (!currentUser || !Number.isFinite(value) || cents <= 0) return;
+        animatePiggyCoin(event, cents);
 
+        const localId = 'local-piggy-' + Date.now() + '-' + Math.random().toString(16).slice(2);
+        const nowIso = new Date().toISOString();
         const localTransaction = {
-          id: 'local-piggy-' + Date.now() + '-' + Math.random().toString(16).slice(2),
+          id: localId,
           goal_id: null,
           goal_title: PIGGY_TITLE,
           amount: value,
           from_role: currentUser.email,
           to_role: currentUser.email,
           date: todayISO(),
-          timestamp: new Date().toISOString(),
+          timestamp: nowIso,
           family_code: familyCode
         };
+
         transactions.unshift(localTransaction);
-        suppressSoftUntil = Date.now() + 1100;
+        suppressSoftUntil = Date.now() + 1200;
         renderApp(true);
-        try {
+
+        piggySaveQueue = piggySaveQueue.catch(() => {}).then(async () => {
           const tr = await supabase.from('transactions').insert([{
             goal_id: null,
             goal_title: PIGGY_TITLE,
@@ -1912,22 +1907,25 @@
             from_role: currentUser.email,
             to_role: currentUser.email,
             date: todayISO(),
-            timestamp: new Date().toISOString(),
+            timestamp: nowIso,
             family_code: familyCode
           }]).select('*').maybeSingle();
+
           if (tr.error) throw tr.error;
-          if (tr.data) transactions = transactions.map(t => t.id === localTransaction.id ? tr.data : t);
-          suppressSoftUntil = Date.now() + 1100;
+          if (tr.data) transactions = transactions.map(t => t.id === localId ? tr.data : t);
+          suppressSoftUntil = Date.now() + 1200;
           renderApp(true);
           scheduleSoftRefresh();
-        } catch (error) {
-          transactions = transactions.filter(t => t.id !== localTransaction.id);
+        }).catch((error) => {
+          transactions = transactions.filter(t => t.id !== localId);
           renderApp(true);
           alert('Eroare la pușculiță: ' + (error.message || error));
-        }
+        });
       },
 
+
       async breakPiggy() {
+        await piggySaveQueue.catch(() => {});
         const balance = piggyBalance();
         if (!currentUser || balance <= 0) return;
         if (!confirm('Spargi pușculița și o resetezi de la 0?')) return;
