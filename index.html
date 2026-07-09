@@ -4,6 +4,20 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Obiectivele Familiei</title>
+  <meta name="theme-color" content="#f4f7fb" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Obiectivele Familiei" />
+  <link rel="icon" type="image/jpeg" href="https://i.postimg.cc/ZRsSkkFf/17330b7e-b007-47f5-a72d-26d1b1073865.jpg" />
+  <link rel="apple-touch-icon" href="https://i.postimg.cc/ZRsSkkFf/17330b7e-b007-47f5-a72d-26d1b1073865.jpg" />
+  <link id="dynamicManifest" rel="manifest" href="" />
+  <script>
+    (() => {
+      const icon = 'https://i.postimg.cc/ZRsSkkFf/17330b7e-b007-47f5-a72d-26d1b1073865.jpg';
+      const manifest = { name:'Obiectivele Familiei Coman', short_name:'Familie Coman', start_url:'.', display:'standalone', background_color:'#f4f7fb', theme_color:'#f4f7fb', icons:[{ src:icon, sizes:'512x512', type:'image/jpeg', purpose:'any maskable' }] };
+      const blob = new Blob([JSON.stringify(manifest)], { type:'application/manifest+json' });
+      window.addEventListener('DOMContentLoaded', () => { const el = document.getElementById('dynamicManifest'); if (el) el.href = URL.createObjectURL(blob); });
+    })();
+  </script>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;450;500;600;700&display=swap');
@@ -1039,45 +1053,6 @@
 
   
 
-    /* Task-uri / notificări / istoric lunar */
-    .task-toast {
-      position: fixed;
-      top: calc(env(safe-area-inset-top) + 14px);
-      left: 50%;
-      transform: translateX(-50%) translateY(-14px);
-      width: min(92vw, 390px);
-      z-index: 10000;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity .22s ease, transform .22s ease;
-    }
-    .task-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-    .task-toast-inner {
-      display:flex;
-      align-items:center;
-      gap:10px;
-      padding: 11px 13px;
-      border-radius: 18px;
-      background: rgba(255,255,255,.92);
-      border: 1px solid rgba(22,163,74,.20);
-      box-shadow: 0 18px 42px rgba(15,23,42,.16);
-      backdrop-filter: blur(14px);
-    }
-    body.dark-mode .task-toast-inner { background: rgba(15,23,42,.92); border-color: rgba(34,197,94,.22); }
-    .task-toast-icon { width:32px; height:32px; border-radius: 12px; display:flex; align-items:center; justify-content:center; background: rgba(34,197,94,.13); color:#16a34a; flex:0 0 auto; }
-    .task-toast-title { font-size: 12px; color: var(--text); line-height:1.2; }
-    .task-toast-text { font-size: 10px; color: var(--muted); margin-top:2px; }
-    .task-action-card { cursor:pointer; transition: transform .14s ease, border-color .14s ease; }
-    .task-action-card:active { transform: scale(.985); }
-    .task-history-month { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px; border-radius:20px; background: rgba(255,255,255,.72); border:1px solid rgba(15,23,42,.07); }
-    body.dark-mode .task-history-month { background: rgba(255,255,255,.055); border-color: rgba(255,255,255,.08); }
-    .task-day-row { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; padding:11px 12px; border-radius:18px; background: rgba(255,255,255,.78); border:1px solid rgba(15,23,42,.06); }
-    body.dark-mode .task-day-row { background: rgba(255,255,255,.055); border-color: rgba(255,255,255,.07); }
-    .task-chipline { display:flex; flex-wrap:wrap; gap:5px; margin-top:7px; }
-    .task-chip { font-size:10px; padding:4px 7px; border-radius:999px; border:1px solid rgba(148,163,184,.22); color: var(--muted); background: rgba(148,163,184,.08); }
-    .task-chip.done { color:#15803d; border-color: rgba(34,197,94,.24); background: rgba(34,197,94,.11); }
-    .task-chip.missing { color:#dc2626; border-color: rgba(239,68,68,.20); background: rgba(239,68,68,.08); }
-    .calc-save-card { padding: 13px; }
     .calc-note-inline { margin-top:6px; font-size:11px; line-height:1.35; color: var(--muted); }
     .calc-note-inline b { color: var(--text); font-weight:500; }
     .piggy-month-card { padding:12px; border-radius:20px; background:rgba(255,255,255,.74); border:1px solid rgba(15,23,42,.07); }
@@ -1130,9 +1105,7 @@
     let selectedPartnerProfileEmail = '';
     let selectedMoneyHistoryType = 'offered';
     let selectedMoneyHistoryMonth = '';
-    let selectedTaskHistoryMonth = '';
     let selectedPiggyHistoryMonth = '';
-    let taskToastTimer = null;
     let gameRooms = [];
     let gameWallets = [];
     let gameTransactions = [];
@@ -1170,11 +1143,59 @@
       trash: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M9 4h6M4 7h16M10 11v6M14 11v6M6 7l1 13a1 1 0 0 0 1 .9h8a1 1 0 0 0 1-.9l1-13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
       more: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="6" r="1.4" fill="currentColor"/><circle cx="12" cy="12" r="1.4" fill="currentColor"/><circle cx="12" cy="18" r="1.4" fill="currentColor"/></svg>',
       pig: '<svg width="23" height="23" viewBox="0 0 24 24" fill="none"><path d="M6.7 10.2C7.9 7.9 10.4 6.5 13.6 6.5h1.7c2.8 0 5.1 2.1 5.1 4.9 0 2.2-1.4 4.1-3.4 4.7l-.5 2.2h-2.2l-.4-1.7h-4.4l-.4 1.7H6.9l-.6-2.4A4.6 4.6 0 0 1 4.2 13H3.1a1.1 1.1 0 0 1 0-2.2h1.2c.4 0 .8-.2 1-.6l1.4-2.1h2.1" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M15.8 6.7c.4-1.4 1.5-2.4 3-2.7.4 1.5-.1 2.8-1.4 3.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><circle cx="16.8" cy="10.8" r=".7" fill="currentColor"/></svg>',
-      gamepad: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M8.3 9.5h7.4c2.7 0 4.5 1.7 4.8 4.4l.3 2.9c.2 1.8-1.7 3-3.1 1.9l-2.1-1.7H8.4l-2.1 1.7c-1.4 1.1-3.3-.1-3.1-1.9l.3-2.9c.3-2.7 2.1-4.4 4.8-4.4Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 13.5h3M9.5 12v3M15.5 13.2h.01M18 14.6h.01" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M9.5 9.5V7.8c0-.9.7-1.6 1.6-1.6h1.8c.9 0 1.6.7 1.6 1.6v1.7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
-      tasks: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="4" y="4" width="16" height="16" rx="5" stroke="currentColor" stroke-width="1.8"/><path d="M8 9.2l1.25 1.25L11.5 8.2M13.5 9.4H17M8 14.2l1.25 1.25 2.25-2.25M13.5 14.4H17" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+      gamepad: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M8.3 9.5h7.4c2.7 0 4.5 1.7 4.8 4.4l.3 2.9c.2 1.8-1.7 3-3.1 1.9l-2.1-1.7H8.4l-2.1 1.7c-1.4 1.1-3.3-.1-3.1-1.9l.3-2.9c.3-2.7 2.1-4.4 4.8-4.4Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 13.5h3M9.5 12v3M15.5 13.2h.01M18 14.6h.01" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M9.5 9.5V7.8c0-.9.7-1.6 1.6-1.6h1.8c.9 0 1.6.7 1.6 1.6v1.7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>'
     };
 
     const money = (v) => Number(v || 0).toLocaleString('ro-RO', { maximumFractionDigits: 2 });
+
+    const appIconUrl = 'https://i.postimg.cc/ZRsSkkFf/17330b7e-b007-47f5-a72d-26d1b1073865.jpg';
+    let eurRateCache = { date: '', rate: null };
+    const goalCurrency = (goal) => String(goal?.currency || 'RON').toUpperCase() === 'EUR' ? 'EUR' : 'RON';
+    const transactionCurrency = (t) => String(t?.currency || 'RON').toUpperCase() === 'EUR' ? 'EUR' : 'RON';
+    const moneyWithCurrency = (v, currency = 'RON') => `${money(v)} ${currency === 'EUR' ? 'EUR' : 'RON'}`;
+    const transactionRonAmount = (t) => {
+      const direct = Number(t?.amount_ron);
+      if (Number.isFinite(direct) && direct !== 0) return direct;
+      const amount = Number(t?.amount || 0);
+      if (transactionCurrency(t) !== 'EUR') return amount;
+      const rate = Number(t?.exchange_rate);
+      return Number.isFinite(rate) && rate > 0 ? amount * rate : amount;
+    };
+    async function getTodayEurRate() {
+      const day = todayISO();
+      if (eurRateCache.date === day && Number(eurRateCache.rate) > 0) return Number(eurRateCache.rate);
+      try {
+        const cached = await safeFetch(supabase.from('fx_rates').select('rate').eq('rate_date', day).eq('base_currency', 'EUR').eq('target_currency', 'RON').maybeSingle());
+        const saved = Array.isArray(cached) ? cached[0] : cached;
+        if (saved?.rate && Number(saved.rate) > 0) {
+          eurRateCache = { date: day, rate: Number(saved.rate) };
+          localStorage.setItem('eur_rate_last', JSON.stringify(eurRateCache));
+          return Number(saved.rate);
+        }
+      } catch (_) {}
+      try {
+        const res = await fetch('https://api.frankfurter.app/latest?from=EUR&to=RON', { cache: 'no-store' });
+        const json = await res.json();
+        const rate = Number(json?.rates?.RON);
+        if (!Number.isFinite(rate) || rate <= 0) throw new Error('Curs invalid');
+        eurRateCache = { date: day, rate };
+        localStorage.setItem('eur_rate_last', JSON.stringify(eurRateCache));
+        try { await supabase.from('fx_rates').upsert({ rate_date: day, base_currency: 'EUR', target_currency: 'RON', rate, source: 'frankfurter' }); } catch (_) {}
+        return rate;
+      } catch (_) {
+        try {
+          const last = JSON.parse(localStorage.getItem('eur_rate_last') || '{}');
+          if (Number(last.rate) > 0) return Number(last.rate);
+        } catch (_) {}
+        const manual = prompt('Nu pot lua automat cursul EUR/RON azi. Scrie cursul manual, ex: 4.97');
+        const rate = Number(String(manual || '').trim().replace(',', '.'));
+        if (!Number.isFinite(rate) || rate <= 0) throw new Error('Curs EUR invalid. Încearcă iar.');
+        eurRateCache = { date: day, rate };
+        localStorage.setItem('eur_rate_last', JSON.stringify(eurRateCache));
+        try { await supabase.from('fx_rates').upsert({ rate_date: day, base_currency: 'EUR', target_currency: 'RON', rate, source: 'manual' }); } catch (_) {}
+        return rate;
+      }
+    }
 
     const normalizeFamilyCode = (v) => String(v || '')
       .trim()
@@ -1197,7 +1218,7 @@
     const formatMonthTitle = (dateStr) => new Date(dateStr + 'T12:00:00').toLocaleDateString('ro-RO', { month:'long', year:'numeric' });
     const firstOfMonth = (dateStr) => { const d = new Date(dateStr + 'T12:00:00'); return new Date(d.getFullYear(), d.getMonth(), 1, 12).toISOString().split('T')[0]; };
     const shiftMonth = (dateStr, months) => { const d = new Date(dateStr + 'T12:00:00'); d.setMonth(d.getMonth() + months, 1); return d.toISOString().split('T')[0]; };
-    const hasMoneyOnDate = (dateStr) => visibleTransactions().some(t => transactionBelongsToFamily(t) && String(t.date).slice(0,10) === dateStr && Number(t.amount || 0) > 0);
+    const hasMoneyOnDate = (dateStr) => visibleTransactions().some(t => transactionBelongsToFamily(t) && !isPiggyTransaction(t) && t.goal_id && String(t.date).slice(0,10) === dateStr && Number(t.amount || 0) !== 0);
     const getProfile = (email) => profiles.find(p => p.email === email);
     const getRole = (email) => email === currentUser?.email ? (getProfile(email)?.role || currentUser?.user_metadata?.role || 'sot') : (getProfile(email)?.role || 'sotie');
     const roleLabel = (role) => role === 'sotie' ? 'Soție' : 'Soț';
@@ -1385,7 +1406,6 @@
       if (!dataLoadedOnce) {
         completedNotified = new Set(goals.filter(isGoalDone).map(g => g.id));
         dataLoadedOnce = true;
-        seedTaskNotificationsForToday();
       }
 
       if (render) renderApp(soft);
@@ -1397,7 +1417,6 @@
       if (piggyNeedsConfetti) {
         setTimeout(showConfetti, 160);
       }
-      if (!firstLoadThisFetch) checkNewTaskCompletions();
     }
 
     function setupRealtime() {
@@ -1418,7 +1437,7 @@
       }
       refreshTimer = setTimeout(() => {
         // Nu redesenăm paginile sensibile, ca să nu se vadă saltul la refresh.
-        const quietPages = ['home', 'moneyHistory', 'calendar', 'calculator', 'tasks'].includes(currentPage);
+        const quietPages = ['home', 'moneyHistory', 'calendar', 'calculator'].includes(currentPage);
         if (quietPages) {
           fetchData({ render: false });
         } else {
@@ -1440,7 +1459,6 @@
       else if (currentPage === 'calculator') { content = calculatorHTML(); nav = false; }
       else if (currentPage === 'calendar') { content = calendarPageHTML(); nav = false; }
       else if (currentPage === 'piggy') { content = piggyPageHTML(); nav = false; }
-      else if (currentPage === 'tasks') { content = tasksPageHTML(); nav = false; }
       else if (currentPage === 'flappyLobby') { content = flappyLobbyHTML(); nav = false; }
       else if (currentPage === 'moneyHistory') { content = moneyHistoryPageHTML(); nav = false; }
       else if (currentPage === 'goalStats') { content = statsHTML(); nav = false; }
@@ -1487,10 +1505,10 @@
       const myGoals = goals.filter(g => !isCommonGoal(g) && g.owner === currentUser.email && goalBelongsToFamily(g) && showCompletedOnHome(g));
       const commonGoals = goals.filter(g => isCommonGoal(g) && goalBelongsToFamily(g) && showCompletedOnHome(g));
       const otherGoals = goals.filter(g => !isCommonGoal(g) && g.owner !== currentUser.email && goalBelongsToFamily(g) && showCompletedOnHome(g));
-      const todayTransactions = visibleTransactions().filter(t => transactionBelongsToFamily(t) && String(t.date).slice(0,10) === todayISO()).slice(0,3);
+      const todayTransactions = visibleTransactions().filter(t => transactionBelongsToFamily(t) && !isPiggyTransaction(t) && t.goal_id && String(t.date).slice(0,10) === todayISO()).slice(0,3);
       const currentMoneyMonth = firstOfMonth(todayISO());
-      const offered = moneyMovementsForMonth('offered', currentMoneyMonth).reduce((s,t) => s + Math.max(0, Number(t.amount || 0)), 0);
-      const received = moneyMovementsForMonth('received', currentMoneyMonth).reduce((s,t) => s + Math.max(0, Number(t.amount || 0)), 0);
+      const offered = moneyMovementsForMonth('offered', currentMoneyMonth).reduce((s,t) => s + Math.max(0, transactionRonAmount(t)), 0);
+      const received = moneyMovementsForMonth('received', currentMoneyMonth).reduce((s,t) => s + Math.max(0, transactionRonAmount(t)), 0);
       const partnerLabel = myRole === 'sot' ? 'Soției' : 'Soțului';
       const visiblePartnerEmail = otherGoals[0]?.owner || partnerEmail() || '';
       const piggy = piggyBalance();
@@ -1501,7 +1519,6 @@
             <button class="top-piggy" onclick="window.appActions.openPiggy()" aria-label="Deschide pușculița">
               <div class="piggy-icon-box">${svg.pig}</div>
             </button>
-            <button class="top-game-btn" onclick="window.appActions.openTasks()" aria-label="Task-uri zilnice">${svg.tasks}</button>
           </div>
           <div class="quick-actions">
             <button class="icon-btn" onclick="window.appActions.openCalendar()" aria-label="Calendar">${svg.calendar}</button>
@@ -1539,8 +1556,8 @@
         </div>
 
         <div class="section">
-          <div class="section-head"><span>Ultimele mișcări</span>${todayTransactions.length ? `<button class="clear-history-btn" onclick="window.appActions.clearDayHistory(event)">Șterge istoric</button>` : `<small>azi</small>`}</div>
-          <div class="history-list space-y-2">${todayTransactions.length ? todayTransactions.map(transactionRow).join('') : emptyHTML('Nicio mișcare azi.')}</div>
+          <div class="section-head"><span>Istoric azi</span>${todayTransactions.length ? `<button class="clear-history-btn" onclick="window.appActions.clearDayHistory(event)">Șterge istoric</button>` : `<small>azi</small>`}</div>
+          <div class="history-list space-y-2">${todayTransactions.length ? todayTransactions.map(transactionRow).join('') : emptyHTML('Nicio înregistrare azi.')}</div>
         </div>`;
     }
 
@@ -1661,18 +1678,20 @@ function piggyPageHTML() {
         });
       const entries = Object.entries(sums).filter(([, value]) => value > 0).sort((a, b) => b[1] - a[1]);
       if (!entries.length) return '';
+      const currency = goalCurrency(goal);
       return `<div class="completed-contributions">${entries.map(([email, value]) => {
         const isGame = String(email || '').toUpperCase() === 'SOLD_JOCURI';
         const role = isGame ? '' : getRole(email);
         const cls = isGame ? '' : (role === 'sotie' ? 'partner-wife' : role === 'sot' ? 'partner-husband' : '');
         const label = isGame ? 'JOCURI' : roleLabel(role).toUpperCase();
-        return `<span class="contribution-chip ${cls}">${escapeHTML(label)} +${money(value)} RON</span>`;
+        return `<span class="contribution-chip ${cls}">${escapeHTML(label)} +${moneyWithCurrency(value, currency)}</span>`;
       }).join('')}</div>`;
     }
 
     function goalCard(goal, isMine) {
       const current = Number(goal.current || 0);
       const target = Number(goal.target || 1);
+      const currency = goalCurrency(goal);
       const percent = Math.min(100, Math.round((current / target) * 100));
       const done = percent >= 100;
       const common = isCommonGoal(goal);
@@ -1688,7 +1707,7 @@ function piggyPageHTML() {
               </div>
               <p class="goal-owner">${common ? 'Obiectiv comun' : ownerLabel(goal.owner)}</p>
             </div>
-            <p class="goal-money">${money(current)} RON <span class="muted">din ${money(target)} RON</span></p>
+            <p class="goal-money">${moneyWithCurrency(current, currency)} <span class="muted">din ${moneyWithCurrency(target, currency)}</span></p>
           </div>
           <div class="progress ${goal.owner !== currentUser.email ? 'partner' : ''} ${done ? 'done' : ''}"><span style="width:${percent}%"></span></div>
           ${done ? completedContributionHTML(goal) : ''}
@@ -1736,8 +1755,8 @@ function piggyPageHTML() {
     }
 
     function calendarPageHTML() {
-      const selectedTransactions = visibleTransactions().filter(t => transactionBelongsToFamily(t) && String(t.date).slice(0,10) === selectedDate);
-      const totalDay = selectedTransactions.reduce((s,t) => s + Number(t.amount || 0), 0);
+      const selectedTransactions = visibleTransactions().filter(t => transactionBelongsToFamily(t) && !isPiggyTransaction(t) && t.goal_id && String(t.date).slice(0,10) === selectedDate);
+      const totalDay = selectedTransactions.reduce((s,t) => s + transactionRonAmount(t), 0);
       return `
         ${backButton()}
         <div class="top-card mb-4">
@@ -1751,7 +1770,7 @@ function piggyPageHTML() {
           </div>
           <span class="text-sm" style="color:${totalDay < 0 ? 'var(--danger)' : 'var(--success)'}">${totalDay >= 0 ? '+' : ''}${money(totalDay)} RON</span>
         </div>
-        <div class="section"><div class="section-head"><span></span>${selectedTransactions.length ? `<button class="clear-history-btn" onclick="window.appActions.clearDayHistory(event)">Șterge istoric</button>` : `<small>0</small>`}</div><div class="history-list space-y-2">${selectedTransactions.length ? selectedTransactions.map(transactionRow).join('') : emptyHTML('Nicio mișcare în ziua asta.')}</div></div>`;
+        <div class="section"><div class="section-head"><span></span>${selectedTransactions.length ? `<button class="clear-history-btn" onclick="window.appActions.clearDayHistory(event)">Șterge istoric</button>` : `<small>0</small>`}</div><div class="history-list space-y-2">${selectedTransactions.length ? selectedTransactions.map(transactionRow).join('') : emptyHTML('Nicio înregistrare în ziua asta.')}</div></div>`;
     }
 
     function partnerHTML() {
@@ -1889,14 +1908,15 @@ function piggyPageHTML() {
       const added = list.filter(t => Number(t.amount) > 0).reduce((s,t) => s + Number(t.amount), 0);
       const removed = list.filter(t => Number(t.amount) < 0).reduce((s,t) => s + Math.abs(Number(t.amount)), 0);
       const current = Number(goal.current || 0), target = Number(goal.target || 1);
+      const currency = goalCurrency(goal);
       const percent = Math.min(100, Math.round((current / target) * 100));
       const byDate = {};
       list.forEach(t => { const d = String(t.date).slice(0,10); (byDate[d] ||= []).push(t); });
       const dates = Object.keys(byDate).sort((a,b) => b.localeCompare(a));
       return `
         ${backButton()}
-        <div class="top-card mb-4"><p class="muted text-xs">Statistici</p><h2 class="text-2xl font-medium tracking-[-.03em]">${escapeHTML(String(goal.title || '').toUpperCase())}</h2><p class="muted text-sm mt-1">${money(current)} din ${money(target)} RON</p><div class="progress mt-4 ${percent>=100?'done':''}"><span style="width:${percent}%"></span></div>${percent >= 100 ? completedContributionHTML(goal) : ''}${goal.owner === currentUser.email && percent < 100 ? `<button class="btn btn-soft btn-full mt-3" onclick="window.appActions.openEditGoal('${goal.id}')">Editează obiectivul</button>` : ''}${goal.owner === currentUser.email && percent >= 100 ? `<button class="btn btn-soft btn-full mt-3" onclick="window.appActions.deleteGoal('${goal.id}')">Șterge obiectivul finalizat</button>` : ''}</div>
-        <div class="stat-grid mb-4"><div class="stat-mini"><span>Pus</span><b>${money(added)}</b></div><div class="stat-mini"><span>Scos</span><b>${money(removed)}</b></div><div class="stat-mini"><span>Mișcări</span><b>${list.length}</b></div></div>
+        <div class="top-card mb-4"><p class="muted text-xs">Statistici</p><h2 class="text-2xl font-medium tracking-[-.03em]">${escapeHTML(String(goal.title || '').toUpperCase())}</h2><p class="muted text-sm mt-1">${moneyWithCurrency(current, currency)} din ${moneyWithCurrency(target, currency)}</p><div class="progress mt-4 ${percent>=100?'done':''}"><span style="width:${percent}%"></span></div>${percent >= 100 ? completedContributionHTML(goal) : ''}${goal.owner === currentUser.email && percent < 100 ? `<button class="btn btn-soft btn-full mt-3" onclick="window.appActions.openEditGoal('${goal.id}')">Editează obiectivul</button>` : ''}${goal.owner === currentUser.email && percent >= 100 ? `<button class="btn btn-soft btn-full mt-3" onclick="window.appActions.deleteGoal('${goal.id}')">Șterge obiectivul finalizat</button>` : ''}</div>
+        <div class="stat-grid mb-4"><div class="stat-mini"><span>Pus</span><b>${moneyWithCurrency(added, currency)}</b></div><div class="stat-mini"><span>Scos</span><b>${moneyWithCurrency(removed, currency)}</b></div><div class="stat-mini"><span>Înregistrări</span><b>${list.length}</b></div></div>
         <div class="section"><div class="section-head"><span>Pe zile</span>${list.length ? `<button class="clear-history-btn" onclick="window.appActions.clearGoalHistory('${goal.id}')">Șterge istoric</button>` : ``}</div><div class="space-y-3">${dates.length ? dates.map(d => `<div class="card"><div class="flex justify-between mb-2"><span class="text-sm capitalize">${formatFullDate(d)}</span><span class="text-sm muted">${byDate[d].length}</span></div><div class="space-y-2">${byDate[d].map(transactionRow).join('')}</div></div>`).join('') : emptyHTML('Nu există încă statistici.')}</div></div>`;
     }
 
@@ -1913,8 +1933,8 @@ function piggyPageHTML() {
       const key = monthKeyFromDate(monthDate || todayISO());
       return visibleTransactions()
         .filter(t => transactionBelongsToFamily(t))
-        .filter(t => !isPiggyTransaction(t))
-        .filter(t => Number(t.amount || 0) > 0)
+        .filter(t => !isPiggyTransaction(t) && t.goal_id)
+        .filter(t => transactionRonAmount(t) > 0)
         .filter(t => transactionMonthKey(t) === key)
         .filter(t => type === 'offered'
           ? (t.from_role === currentUser.email && t.to_role !== currentUser.email)
@@ -1937,7 +1957,7 @@ function piggyPageHTML() {
             <p class="text-sm mt-1" style="color:var(--text); white-space:normal; word-break:break-word;">${escapeHTML(String(t.goal_title || '').toUpperCase())}</p>
             <p class="text-[11px] muted mt-1">${dateText} · ${timeText}</p>
           </div>
-          <p class="text-sm" style="color:${type === 'offered' ? 'var(--danger)' : 'var(--success)'}; white-space:nowrap;">+${money(t.amount)} RON</p>
+          <p class="text-sm" style="color:${type === 'offered' ? 'var(--danger)' : 'var(--success)'}; white-space:nowrap;">+${money(transactionRonAmount(t))} RON</p>
         </div>
       </div>`;
     }
@@ -1967,62 +1987,6 @@ function piggyPageHTML() {
       </div>`;
     }
 
-    function dailyTasksForDate(dateStr) {
-      const day = String(dateStr || todayISO()).slice(0,10);
-      const createdGoalToday = goals.some(g => goalBelongsToFamily(g) && g.owner === currentUser?.email && String(g.created_at || '').slice(0,10) === day);
-      const offeredToday = visibleTransactions().some(t => transactionBelongsToFamily(t) && !isPiggyTransaction(t) && Number(t.amount || 0) > 0 && String(t.date || t.timestamp || '').slice(0,10) === day && t.from_role === currentUser?.email && t.to_role !== currentUser?.email);
-      const piggyToday = visibleTransactions().some(t => transactionBelongsToFamily(t) && isPiggyTransaction(t) && Number(t.amount || 0) > 0 && String(t.date || t.timestamp || '').slice(0,10) === day);
-      const partnerText = getRole(currentUser?.email) === 'sot' ? 'soției' : 'soțului';
-      return [
-        { id:'goal', done: createdGoalToday, title:'Adaugă un obiectiv', text:'Creează azi un obiectiv personal sau comun.', icon: svg.plus },
-        { id:'offer', done: offeredToday, title:'Oferă partenerului', text:`Pune bani azi la un obiectiv al ${partnerText}.`, icon: svg.home },
-        { id:'piggy', done: piggyToday, title:'Pușculița zilei', text:'Adaugă o monedă în pușculița voastră.', icon: svg.pig }
-      ];
-    }
-
-    function dailyTasksForToday() { return dailyTasksForDate(todayISO()); }
-
-    function taskNotifyStorageKey(dateStr, id) {
-      return `task_done_notice:${familyCode || DEFAULT_FAMILY_CODE}:${currentUser?.email || 'user'}:${dateStr}:${id}`;
-    }
-
-    function seedTaskNotificationsForToday() {
-      const day = todayISO();
-      dailyTasksForToday().filter(t => t.done).forEach(t => localStorage.setItem(taskNotifyStorageKey(day, t.id), '1'));
-    }
-
-    function taskCheckIcon() {
-      return '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4 4L19 6.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-    }
-
-    function showTaskToast(title) {
-      document.getElementById('taskToast')?.remove();
-      clearTimeout(taskToastTimer);
-      const el = document.createElement('div');
-      el.id = 'taskToast';
-      el.className = 'task-toast';
-      el.innerHTML = `<div class="task-toast-inner"><div class="task-toast-icon">${taskCheckIcon()}</div><div><p class="task-toast-title">Felicitări, ai finalizat taskul</p><p class="task-toast-text">${escapeHTML(title)}</p></div></div>`;
-      document.body.appendChild(el);
-      requestAnimationFrame(() => el.classList.add('show'));
-      taskToastTimer = setTimeout(() => {
-        el.classList.remove('show');
-        setTimeout(() => el.remove(), 260);
-      }, 2800);
-    }
-
-    function checkNewTaskCompletions() {
-      if (!currentUser || !dataLoadedOnce) return;
-      const day = todayISO();
-      dailyTasksForToday().filter(t => t.done).forEach(t => {
-        const key = taskNotifyStorageKey(day, t.id);
-        if (!localStorage.getItem(key)) {
-          localStorage.setItem(key, '1');
-          if (currentPage !== 'tasks') showTaskToast(t.title);
-          setTimeout(showConfetti, 80);
-        }
-      });
-    }
-
     function monthDays(dateStr) {
       const base = new Date((dateStr || todayISO()) + 'T12:00:00');
       const y = base.getFullYear();
@@ -2037,61 +2001,11 @@ function piggyPageHTML() {
       return out.reverse();
     }
 
-    function taskMonthHistoryHTML() {
-      const month = selectedTaskHistoryMonth || firstOfMonth(todayISO());
-      const days = monthDays(month);
-      return `<div class="section">
-        <div class="section-head"><span>Istoric task-uri</span><small class="capitalize">${formatMonthTitle(month)}</small></div>
-        <div class="task-history-month mb-3">
-          <button class="money-month-nav" onclick="window.appActions.shiftTaskHistoryMonth(-1)">${svg.back}</button>
-          <div class="text-center min-w-0"><p class="text-sm capitalize" style="color:var(--text)">${formatMonthTitle(month)}</p><p class="text-[11px] muted">finalizate și nefinalizate</p></div>
-          <button class="money-month-nav" onclick="window.appActions.shiftTaskHistoryMonth(1)" style="transform:rotate(180deg)">${svg.back}</button>
-        </div>
-        <div class="space-y-2">${days.length ? days.map(day => {
-          const list = dailyTasksForDate(day);
-          const doneCount = list.filter(t => t.done).length;
-          return `<div class="task-day-row"><div class="min-w-0"><p class="text-sm capitalize" style="color:var(--text)">${formatFullDate(day)}</p><div class="task-chipline">${list.map(t => `<span class="task-chip ${t.done ? 'done' : 'missing'}">${escapeHTML(t.title)} · ${t.done ? 'gata' : 'nefăcut'}</span>`).join('')}</div></div><span class="text-xs muted whitespace-nowrap">${doneCount}/3</span></div>`;
-        }).join('') : emptyHTML('Nu există zile în luna asta.')}</div>
-      </div>`;
-    }
-
-    function tasksPageHTML() {
-      const list = dailyTasksForToday();
-      const doneCount = list.filter(t => t.done).length;
-      const percent = Math.round((doneCount / list.length) * 100);
-      return `${backButton()}
-        <div class="top-card mb-4">
-          <div class="flex items-center gap-3">
-            <span class="icon-btn">${svg.tasks}</span>
-            <div>
-              <p class="muted text-xs">Task-uri zilnice</p>
-              <h2 class="text-2xl font-medium tracking-[-.03em]">Rutina voastră</h2>
-            </div>
-          </div>
-          <p class="text-sm muted mt-3 leading-relaxed">Trei pași mici pe zi ca obiectivele voastre să avanseze fără stres.</p>
-          <div class="progress mt-4"><span style="width:${percent}%"></span></div>
-          <p class="text-xs muted mt-2">${doneCount}/3 task-uri făcute azi</p>
-        </div>
-        <div class="section">
-          <div class="section-head"><span>Azi</span><small>${formatFullDate(todayISO())}</small></div>
-          <div class="space-y-3">
-            ${list.map(item => `<button class="card task-action-card" onclick="window.appActions.openTaskAction('${item.id}')" style="width:100%; padding:13px 14px; display:flex; align-items:center; gap:12px; text-align:left;">
-              <div class="icon-btn" style="flex:0 0 auto; ${item.done ? 'background:rgba(34,197,94,.13); color:#16a34a;' : ''}">${item.done ? taskCheckIcon() : item.icon}</div>
-              <div class="min-w-0 flex-1">
-                <p class="text-sm" style="color:var(--text)">${escapeHTML(item.title)}</p>
-                <p class="text-xs muted mt-1">${escapeHTML(item.text)}</p>
-              </div>
-              <span class="text-[11px]" style="color:${item.done ? '#16a34a' : 'var(--muted)'}">${item.done ? 'Gata' : 'Deschide'}</span>
-            </button>`).join('')}
-          </div>
-        </div>`;
-    }
-
     function moneyHistoryPageHTML() {
       const type = selectedMoneyHistoryType === 'received' ? 'received' : 'offered';
       const month = selectedMoneyHistoryMonth || firstOfMonth(todayISO());
       const list = moneyMovementsForMonth(type, month);
-      const total = list.reduce((s, t) => s + Number(t.amount || 0), 0);
+      const total = list.reduce((s, t) => s + transactionRonAmount(t), 0);
       const title = type === 'offered' ? 'Ai oferit' : 'Ai primit';
       const tone = type === 'offered' ? 'var(--danger)' : 'var(--success)';
       return `${backButton()}
@@ -2102,7 +2016,7 @@ function piggyPageHTML() {
             <button class="money-month-nav" onclick="window.appActions.shiftMoneyHistoryMonth(-1)">${svg.back}</button>
             <div class="text-center min-w-0">
               <p class="text-sm capitalize" style="color:var(--text)">${formatMonthTitle(month)}</p>
-              <p class="text-[11px] muted">${list.length} mișcări salvate</p>
+              <p class="text-[11px] muted">${list.length} înregistrări</p>
             </div>
             <button class="money-month-nav" onclick="window.appActions.shiftMoneyHistoryMonth(1)" style="transform:rotate(180deg)">${svg.back}</button>
           </div>
@@ -2113,18 +2027,20 @@ function piggyPageHTML() {
         </div>
         <div class="section">
           <div class="section-head"><span>${title}</span><small class="capitalize">${formatMonthTitle(month)}</small></div>
-          <div class="space-y-2">${list.length ? list.map(t => moneyMovementRow(t, type)).join('') : emptyHTML('Nu există mișcări în luna asta.')}</div>
+          <div class="space-y-2">${list.length ? list.map(t => moneyMovementRow(t, type)).join('') : emptyHTML('Nu există înregistrări în luna asta.')}</div>
         </div>`;
     }
 
     function transactionRow(t) {
       const amount = Number(t.amount || 0);
       const color = amount < 0 ? 'var(--danger)' : 'var(--success)';
-      const piggy = isPiggyTransaction(t);
+      const currency = transactionCurrency(t);
       const fromGame = String(t.source || '').toLowerCase() === 'game_withdrawal' || String(t.from_role || '').toUpperCase() === 'SOLD_JOCURI';
-      const text = piggy ? 'Monedă adăugată' : (fromGame ? 'Adăugat din joc' : (amount < 0 ? 'S-a scos din' : (t.from_role === t.to_role ? 'S-a pus la' : 'S-a oferit la')));
-      const title = piggy ? 'PUȘCULIȚĂ' : String(t.goal_title || '').toUpperCase();
-      return `<div class="card" style="padding:11px 12px"><div class="flex items-center justify-between gap-3"><p class="text-xs muted">${text} <span style="color:var(--text)">${escapeHTML(title)}</span></p><p class="text-xs" style="color:${color}; white-space:nowrap;">${amount > 0 ? '+' : ''}${money(amount)}</p></div></div>`;
+      const text = fromGame ? 'Adăugat din joc' : (amount < 0 ? 'S-a scos din' : (t.from_role === t.to_role ? 'S-a pus la' : 'S-a oferit la'));
+      const title = String(t.goal_title || '').toUpperCase();
+      const ron = transactionRonAmount(t);
+      const extra = currency === 'EUR' ? `<span class="muted"> · ${money(Math.abs(ron))} RON</span>` : '';
+      return `<div class="card" style="padding:11px 12px"><div class="flex items-center justify-between gap-3"><p class="text-xs muted">${text} <span style="color:var(--text)">${escapeHTML(title)}</span></p><p class="text-xs" style="color:${color}; white-space:nowrap;">${amount > 0 ? '+' : ''}${moneyWithCurrency(amount, currency)}${extra}</p></div></div>`;
     }
 
     function bottomNavHTML() {
@@ -2591,18 +2507,6 @@ function piggyPageHTML() {
       openCalculator() { previousPage = currentPage; currentPage = 'calculator'; renderApp(); },
       openCalendar() { previousPage = currentPage; currentPage = 'calendar'; renderApp(); },
       openPiggy() { previousPage = currentPage; currentPage = 'piggy'; renderApp(); },
-      openTasks() { previousPage = currentPage; currentPage = 'tasks'; selectedTaskHistoryMonth = selectedTaskHistoryMonth || firstOfMonth(todayISO()); renderApp(); },
-      openTaskAction(id) {
-        if (id === 'goal') return this.openAddGoal();
-        if (id === 'piggy') return this.openPiggy();
-        if (id === 'offer') {
-          previousPage = 'tasks';
-          currentPage = 'home';
-          renderApp();
-          requestAnimationFrame(() => document.getElementById('partnerOfferSection')?.scrollIntoView({ behavior:'smooth', block:'start' }));
-        }
-      },
-      shiftTaskHistoryMonth(months) { selectedTaskHistoryMonth = shiftMonth(selectedTaskHistoryMonth || firstOfMonth(todayISO()), months); renderApp(); },
       shiftPiggyHistoryMonth(months) { selectedPiggyHistoryMonth = shiftMonth(selectedPiggyHistoryMonth || firstOfMonth(todayISO()), months); renderApp(); },
       openFlappyLobby() {
         const active = gameRoomsForMe().find(r => ['invite','accepted','countdown','playing'].includes(r.status));
@@ -2648,7 +2552,7 @@ function piggyPageHTML() {
       swipeEnd(e) { if (!swipeMoved) return; const diff = e.clientX - swipeStartX; swipeMoved = false; if (Math.abs(diff) > 45) this.shiftDate(diff < 0 ? 1 : -1); },
       swipeCancel() { swipeMoved = false; },
       openAddGoal() {
-        modal.innerHTML = `<div class="modal-backdrop"><div class="sheet"><div class="grab"></div><h3 class="text-xl font-medium mb-4">Adaugă obiectiv</h3><div class="space-y-3"><div><p class="label">Tip obiectiv</p><div class="grid grid-cols-2 gap-2"><button id="goalTypePersonal" class="btn btn-gold btn-full" onclick="window.appActions.selectGoalType('personal')">Personal</button><button id="goalTypeCommon" class="btn btn-soft btn-full" onclick="window.appActions.selectGoalType('common')">Comun</button></div><input id="goalTypeInput" type="hidden" value="personal"></div><div><p class="label">Titlu</p><input id="goalTitleInput" class="input" placeholder="VACANȚĂ" maxlength="42" style="text-transform:uppercase; letter-spacing:.04em;" oninput="this.value=this.value.toLocaleUpperCase('ro-RO')"></div><div><p class="label">Suma necesară</p><input id="goalTargetInput" type="number" class="input" placeholder="1000"></div><div class="grid grid-cols-2 gap-2 pt-2"><button class="btn btn-soft btn-full" onclick="window.appActions.closeModal()">Anulează</button><button id="saveGoalBtn" class="btn btn-gold btn-full" onclick="window.appActions.saveGoal()">Salvează</button></div></div></div></div>`;
+        modal.innerHTML = `<div class="modal-backdrop"><div class="sheet"><div class="grab"></div><h3 class="text-xl font-medium mb-4">Adaugă obiectiv</h3><div class="space-y-3"><div><p class="label">Tip obiectiv</p><div class="grid grid-cols-2 gap-2"><button id="goalTypePersonal" class="btn btn-gold btn-full" onclick="window.appActions.selectGoalType('personal')">Personal</button><button id="goalTypeCommon" class="btn btn-soft btn-full" onclick="window.appActions.selectGoalType('common')">Comun</button></div><input id="goalTypeInput" type="hidden" value="personal"></div><div><p class="label">Monedă obiectiv</p><div class="grid grid-cols-2 gap-2"><button id="goalCurrencyRON" class="btn btn-gold btn-full" onclick="window.appActions.selectGoalCurrency('RON')">Lei</button><button id="goalCurrencyEUR" class="btn btn-soft btn-full" onclick="window.appActions.selectGoalCurrency('EUR')">Euro</button></div><input id="goalCurrencyInput" type="hidden" value="RON"></div><div><p class="label">Titlu</p><input id="goalTitleInput" class="input" placeholder="VACANȚĂ" maxlength="42" style="text-transform:uppercase; letter-spacing:.04em;" oninput="this.value=this.value.toLocaleUpperCase('ro-RO')"></div><div><p class="label">Suma necesară</p><input id="goalTargetInput" type="number" class="input" placeholder="1000"></div><div class="grid grid-cols-2 gap-2 pt-2"><button class="btn btn-soft btn-full" onclick="window.appActions.closeModal()">Anulează</button><button id="saveGoalBtn" class="btn btn-gold btn-full" onclick="window.appActions.saveGoal()">Salvează</button></div></div></div></div>`;
       },
       closeModal() { modal.innerHTML = ''; },
       selectGoalType(type) {
@@ -2660,30 +2564,39 @@ function piggyPageHTML() {
         if (personal) personal.className = value === 'personal' ? 'btn btn-gold btn-full' : 'btn btn-soft btn-full';
         if (common) common.className = value === 'common' ? 'btn btn-gold btn-full' : 'btn btn-soft btn-full';
       },
+      selectGoalCurrency(currency) {
+        const value = String(currency || '').toUpperCase() === 'EUR' ? 'EUR' : 'RON';
+        const input = document.getElementById('goalCurrencyInput');
+        const ron = document.getElementById('goalCurrencyRON');
+        const eur = document.getElementById('goalCurrencyEUR');
+        if (input) input.value = value;
+        if (ron) ron.className = value === 'RON' ? 'btn btn-gold btn-full' : 'btn btn-soft btn-full';
+        if (eur) eur.className = value === 'EUR' ? 'btn btn-gold btn-full' : 'btn btn-soft btn-full';
+      },
       async saveGoal() {
         const titleInput = document.getElementById('goalTitleInput');
         const targetInput = document.getElementById('goalTargetInput');
         const title = (titleInput?.value || '').trim().toLocaleUpperCase('ro-RO');
         const target = parseAmount(targetInput?.value || '');
         const goalType = document.getElementById('goalTypeInput')?.value === 'common' ? 'common' : 'personal';
+        const currency = document.getElementById('goalCurrencyInput')?.value === 'EUR' ? 'EUR' : 'RON';
         if (!title || !Number.isFinite(target) || target <= 0) return alert('Date invalide.');
         const btn = document.getElementById('saveGoalBtn');
         btn.textContent = 'Salvez...'; btn.disabled = true;
         let localGoal = null;
         try {
           if (!currentUser?.email) throw new Error('Nu ești conectat. Reconectează-te și încearcă iar.');
-          localGoal = { id: crypto.randomUUID(), title, target, current: 0, owner: currentUser.email, family_code: familyCode, goal_type: goalType, created_at: new Date().toISOString() };
+          localGoal = { id: crypto.randomUUID(), title, target, current: 0, owner: currentUser.email, family_code: familyCode, goal_type: goalType, currency, created_at: new Date().toISOString() };
           goals.unshift(localGoal);
           this.closeModal();
           suppressSoftUntil = Date.now() + 1300;
           renderApp();
 
-          const direct = await supabase.from('goals').insert({ title, target, current: 0, owner: currentUser.email, family_code: familyCode, goal_type: goalType }).select('*').maybeSingle();
+          const direct = await supabase.from('goals').insert({ title, target, current: 0, owner: currentUser.email, family_code: familyCode, goal_type: goalType, currency }).select('*').maybeSingle();
           if (direct.error) throw direct.error;
           if (direct.data) goals = goals.map(g => g.id === localGoal.id ? direct.data : g);
           suppressSoftUntil = Date.now() + 1300;
           renderApp(true);
-          checkNewTaskCompletions();
           scheduleSoftRefresh();
         } catch (error) {
           if (localGoal) goals = goals.filter(g => g.id !== localGoal.id);
@@ -2694,7 +2607,7 @@ function piggyPageHTML() {
       openEditGoal(id) {
         const g = goals.find(x => x.id === id); if (!g) return;
         if (g.owner !== currentUser.email) return alert('Poți edita doar obiectivul tău.');
-        modal.innerHTML = `<div class="modal-backdrop"><div class="sheet"><div class="grab"></div><h3 class="text-xl font-medium mb-1">Editează obiectivul</h3><p class="text-sm muted mb-2">${escapeHTML(String(g.title || '').toUpperCase())}</p><p class="edit-goal-hint">Poți mări sau scădea suma obiectivului, apoi apeși Salvează.</p><div class="space-y-3 mt-4"><input id="editGoalTargetInput" type="text" inputmode="decimal" class="input" placeholder="Suma nouă" value="${Number(g.target || 0)}"><div class="grid grid-cols-2 gap-2 pt-2"><button class="btn btn-soft btn-full" onclick="window.appActions.closeModal()">Anulează</button><button id="editGoalBtn" class="btn btn-gold btn-full" onclick="window.appActions.saveEditGoalTarget('${id}')">Salvează</button></div><button id="deleteGoalBtn" class="btn btn-full mt-2" style="background:rgba(239,68,68,.10);border:1px solid rgba(239,68,68,.22);color:#ef4444" onclick="window.appActions.deleteGoal('${id}')">Șterge obiectivul</button><p class="text-[11px] muted text-center">Se șterge obiectivul și istoricul lui de peste tot.</p></div></div></div>`;
+        modal.innerHTML = `<div class="modal-backdrop"><div class="sheet"><div class="grab"></div><h3 class="text-xl font-medium mb-1">Editează obiectivul</h3><p class="text-sm muted mb-2">${escapeHTML(String(g.title || '').toUpperCase())}</p><p class="edit-goal-hint">Poți mări sau scădea suma obiectivului în ${goalCurrency(g) === 'EUR' ? 'EURO' : 'LEI'}, apoi apeși Salvează.</p><div class="space-y-3 mt-4"><input id="editGoalTargetInput" type="text" inputmode="decimal" class="input" placeholder="Suma nouă" value="${Number(g.target || 0)}"><div class="grid grid-cols-2 gap-2 pt-2"><button class="btn btn-soft btn-full" onclick="window.appActions.closeModal()">Anulează</button><button id="editGoalBtn" class="btn btn-gold btn-full" onclick="window.appActions.saveEditGoalTarget('${id}')">Salvează</button></div><button id="deleteGoalBtn" class="btn btn-full mt-2" style="background:rgba(239,68,68,.10);border:1px solid rgba(239,68,68,.22);color:#ef4444" onclick="window.appActions.deleteGoal('${id}')">Șterge obiectivul</button><p class="text-[11px] muted text-center">Se șterge obiectivul și istoricul lui de peste tot.</p></div></div></div>`;
       },
       async saveEditGoalTarget(id) {
         const g = goals.find(x => x.id === id); if (!g) return;
@@ -2756,46 +2669,68 @@ function piggyPageHTML() {
         const title = mode === 'remove' ? 'Scoate bani' : mode === 'gift' ? 'Oferă bani' : 'Pune bani';
         const action = mode === 'remove' ? 'Scoate' : mode === 'gift' ? 'Oferă' : 'Pune';
         const remaining = Math.max(0, Number(g.target || 0) - Number(g.current || 0));
-        const limitText = mode === 'remove' ? `Poți scoate maxim ${money(Number(g.current || 0))} RON.` : `Poți pune maxim ${money(remaining)} RON, cât lipsește până la obiectiv.`;
-        modal.innerHTML = `<div class="modal-backdrop"><div class="sheet"><div class="grab"></div><h3 class="text-xl font-medium mb-1">${title}</h3><p class="text-sm muted mb-1">${escapeHTML(String(g.title || '').toUpperCase())}</p><p class="edit-goal-hint mb-4">${limitText}</p><div class="space-y-3"><input id="moneyAmountInput" type="text" inputmode="decimal" class="input" placeholder="RON" autocomplete="off"><div class="grid grid-cols-2 gap-2 pt-2"><button class="btn btn-soft btn-full" onclick="window.appActions.closeModal()">Anulează</button><button id="moneyBtn" class="btn btn-gold btn-full" onclick="window.appActions.applyMoney('${id}','${mode}')">${action}</button></div></div></div></div>`;
+        const currency = goalCurrency(g);
+        const limitText = currency === 'EUR'
+          ? (mode === 'remove' ? `Obiectiv în EURO. Tu scrii suma în LEI, iar aplicația o transformă automat în euro.` : `Obiectiv în EURO. Tu scrii suma în LEI, iar aplicația o transformă automat în euro.`)
+          : (mode === 'remove' ? `Poți scoate maxim ${money(Number(g.current || 0))} RON.` : `Poți pune maxim ${money(remaining)} RON, cât lipsește până la obiectiv.`);
+        modal.innerHTML = `<div class="modal-backdrop"><div class="sheet"><div class="grab"></div><h3 class="text-xl font-medium mb-1">${title}</h3><p class="text-sm muted mb-1">${escapeHTML(String(g.title || '').toUpperCase())}</p><p class="edit-goal-hint mb-4">${limitText}</p><div class="space-y-3"><input id="moneyAmountInput" type="text" inputmode="decimal" class="input" placeholder="Suma în RON" autocomplete="off"><div class="grid grid-cols-2 gap-2 pt-2"><button class="btn btn-soft btn-full" onclick="window.appActions.closeModal()">Anulează</button><button id="moneyBtn" class="btn btn-gold btn-full" onclick="window.appActions.applyMoney('${id}','${mode}')">${action}</button></div></div></div></div>`;
       },
       async applyMoney(id, mode) {
-        const amountRaw = parseAmount(document.getElementById('moneyAmountInput')?.value || '');
+        const amountRawRon = parseAmount(document.getElementById('moneyAmountInput')?.value || '');
         const g = goals.find(x => x.id === id);
-        if (!g || !Number.isFinite(amountRaw) || amountRaw <= 0) return alert('Sumă invalidă.');
+        if (!g || !Number.isFinite(amountRawRon) || amountRawRon <= 0) return alert('Sumă invalidă.');
         if (isGoalDone(g)) return alert('Obiectiv finalizat. Nu mai poți modifica suma.');
         if (mode === 'remove' && g.owner !== currentUser.email) return alert('Poți scoate doar din obiectivul tău.');
+
+        const currency = goalCurrency(g);
+        let exchangeRate = 1;
+        let amountGoal = amountRawRon;
+        try {
+          if (currency === 'EUR') {
+            exchangeRate = await getTodayEurRate();
+            amountGoal = fromCents(toCents(amountRawRon / exchangeRate));
+          }
+        } catch (error) {
+          return alert(error.message || 'Nu pot calcula cursul euro.');
+        }
 
         const old = Number(g.current || 0);
         const target = Number(g.target || 0);
         const oldCents = toCents(old);
         const targetCents = toCents(target);
-        const amountCents = toCents(amountRaw);
+        const amountCents = toCents(amountGoal);
         const remainingCents = Math.max(0, targetCents - oldCents);
 
         if (amountCents <= 0) return alert('Sumă invalidă.');
         if (mode === 'remove' && amountCents > oldCents) return alert('Nu poți scoate mai mult decât există.');
-        if (mode !== 'remove' && amountCents > remainingCents) return alert('Poți pune maxim ' + money(fromCents(remainingCents)) + ' RON. Ce este peste obiectiv nu se acceptă.');
+        if (mode !== 'remove' && amountCents > remainingCents) {
+          const maxText = currency === 'EUR' ? `${moneyWithCurrency(fromCents(remainingCents), 'EUR')} / aproximativ ${money(fromCents(remainingCents) * exchangeRate)} RON` : `${money(fromCents(remainingCents))} RON`;
+          return alert('Poți pune maxim ' + maxText + '. Ce este peste obiectiv nu se acceptă.');
+        }
         if (mode !== 'remove' && remainingCents <= 0) return alert('Obiectiv finalizat. Nu mai poți modifica suma.');
 
         const requestedDeltaCents = mode === 'remove' ? -amountCents : amountCents;
         const requestedDelta = fromCents(requestedDeltaCents);
+        const requestedDeltaRon = currency === 'EUR' ? (mode === 'remove' ? -amountRawRon : amountRawRon) : requestedDelta;
         const optimistic = fromCents(oldCents + requestedDeltaCents);
-        const optimisticDelta = requestedDelta;
 
         const btn = document.getElementById('moneyBtn');
         if (btn) { btn.textContent = 'Se salvează...'; btn.disabled = true; }
 
         g.current = optimistic;
+        const nowIso = new Date().toISOString();
         const localTransaction = {
           id: 'local-' + Date.now(),
           goal_id: id,
           goal_title: String(g.title || '').toUpperCase(),
-          amount: optimisticDelta,
+          amount: requestedDelta,
+          amount_ron: requestedDeltaRon,
+          currency,
+          exchange_rate: exchangeRate,
           from_role: currentUser.email,
           to_role: g.owner,
           date: todayISO(),
-          timestamp: new Date().toISOString(),
+          timestamp: nowIso,
           family_code: familyCode,
           hidden_in_history: false
         };
@@ -2815,12 +2750,12 @@ function piggyPageHTML() {
 
           g.current = finalAmount;
           localTransaction.amount = actualDelta;
-          const tr = await supabase.from('transactions').insert([{ goal_id:id, goal_title:String(g.title || '').toUpperCase(), amount:actualDelta, from_role:currentUser.email, to_role:g.owner, date:todayISO(), timestamp:new Date().toISOString(), family_code: familyCode }]).select('*').maybeSingle();
+          localTransaction.amount_ron = currency === 'EUR' ? fromCents(toCents(actualDelta * exchangeRate)) : actualDelta;
+          const tr = await supabase.from('transactions').insert([{ goal_id:id, goal_title:String(g.title || '').toUpperCase(), amount:actualDelta, amount_ron: localTransaction.amount_ron, currency, exchange_rate: exchangeRate, from_role:currentUser.email, to_role:g.owner, date:todayISO(), timestamp:nowIso, family_code: familyCode }]).select('*').maybeSingle();
           if (tr.error) throw tr.error;
           if (tr.data) transactions = transactions.map(t => t.id === localTransaction.id ? tr.data : t);
           suppressSoftUntil = Date.now() + 1600;
           if (old < target && finalAmount >= target) markGoalCompleted(g);
-          checkNewTaskCompletions();
           scheduleSoftRefresh();
         } catch (error) {
           g.current = old;
@@ -2859,7 +2794,6 @@ function piggyPageHTML() {
         transactions.unshift(localTransaction);
         suppressSoftUntil = Date.now() + 1200;
         renderApp(true);
-        checkNewTaskCompletions();
         if (milestoneReached) setTimeout(showConfetti, 120);
 
         piggySaveQueue = piggySaveQueue.catch(() => {}).then(async () => {
