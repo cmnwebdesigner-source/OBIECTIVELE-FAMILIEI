@@ -401,6 +401,148 @@
       animation: pulseGold 1.2s ease-in-out infinite;
     }
     @keyframes pulseGold { 0%,100% { transform:scale(.72); opacity:.55; } 50% { transform:scale(1); opacity:1; } }
+  
+
+    /* FIX FINAL: tema reală, carduri rezumat premium, calendar normal */
+    body.dark-mode {
+      --bg: #070b12;
+      --panel: rgba(15,23,42,.88);
+      --panel-2: rgba(255,255,255,.05);
+      --line: rgba(255,255,255,.10);
+      --line-soft: rgba(255,255,255,.07);
+      --text: #f8fafc;
+      --muted: #a6b4c8;
+      --muted-2: #74839a;
+      --gold: #60a5fa;
+      --gold-2: #3b82f6;
+      --gold-3: #eff6ff;
+      --metal: #94a3b8;
+      --shadow: 0 28px 80px rgba(0,0,0,.42);
+      --soft-shadow: 0 18px 46px rgba(0,0,0,.28);
+      background:
+        radial-gradient(circle at 8% -8%, rgba(37,99,235,.22), transparent 30%),
+        radial-gradient(circle at 90% 4%, rgba(239,68,68,.12), transparent 34%),
+        radial-gradient(circle at 50% 105%, rgba(22,163,74,.12), transparent 38%),
+        linear-gradient(180deg, #070b12 0%, #0f172a 58%, #111827 100%);
+    }
+    body.dark-mode .app-shell {
+      background:
+        linear-gradient(180deg, rgba(9,13,22,.99), rgba(15,23,42,.99)),
+        radial-gradient(circle at 50% 0%, rgba(37,99,235,.16), transparent 36%);
+      border-left-color: rgba(255,255,255,.08);
+      border-right-color: rgba(255,255,255,.08);
+    }
+    body.dark-mode .glass,
+    body.dark-mode .card,
+    body.dark-mode .goal-card,
+    body.dark-mode .sheet,
+    body.dark-mode .summary-tile,
+    body.dark-mode .input,
+    body.dark-mode .icon-btn,
+    body.dark-mode .bottom-nav {
+      background: rgba(15,23,42,.86);
+      border-color: rgba(255,255,255,.10);
+      color: var(--text);
+      box-shadow: 0 16px 40px rgba(0,0,0,.24), inset 0 1px 0 rgba(255,255,255,.04);
+    }
+    body.dark-mode .top-card {
+      background:
+        linear-gradient(135deg, rgba(37,99,235,.18), rgba(15,23,42,.92) 48%, rgba(22,163,74,.12)),
+        linear-gradient(180deg, rgba(15,23,42,.98), rgba(15,23,42,.78));
+      border-color: rgba(255,255,255,.10);
+    }
+    .summary-hero {
+      border-radius: 30px;
+      padding: 16px;
+      background:
+        linear-gradient(145deg, rgba(255,255,255,.96), rgba(244,247,251,.92)),
+        radial-gradient(circle at 15% 0%, rgba(37,99,235,.13), transparent 45%),
+        radial-gradient(circle at 95% 15%, rgba(22,163,74,.12), transparent 44%);
+      border: 1px solid rgba(15,23,42,.08);
+      box-shadow: 0 22px 55px rgba(15,23,42,.10), inset 0 1px 0 rgba(255,255,255,.94);
+      overflow: hidden;
+      position: relative;
+    }
+    .summary-hero:before {
+      content:'';
+      position:absolute;
+      inset:-60px -60px auto auto;
+      width:160px;
+      height:160px;
+      border-radius:999px;
+      background: radial-gradient(circle, rgba(37,99,235,.16), transparent 66%);
+      pointer-events:none;
+    }
+    .summary-hero-top { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px; position:relative; }
+    .summary-title { font-size:18px; line-height:1.12; font-weight:500; letter-spacing:-.04em; color:var(--text); }
+    .summary-sub { font-size:11px; color:var(--muted); margin-top:4px; }
+    .summary-pill { border-radius:999px; padding:9px 11px; font-size:11px; color:#fff; background:linear-gradient(135deg,#0f172a,#2563eb); box-shadow:0 10px 22px rgba(37,99,235,.20); white-space:nowrap; }
+    .summary-grid { display:grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap:10px; position:relative; }
+    .summary-tile {
+      border-radius: 22px;
+      padding: 13px;
+      min-width:0;
+      background: rgba(255,255,255,.78);
+      border: 1px solid rgba(15,23,42,.075);
+      box-shadow: 0 12px 28px rgba(15,23,42,.055);
+    }
+    .summary-tile.offered { background: linear-gradient(145deg, rgba(239,68,68,.10), rgba(255,255,255,.92)); }
+    .summary-tile.received { background: linear-gradient(145deg, rgba(22,163,74,.12), rgba(255,255,255,.92)); }
+    .summary-icon { width:36px; height:36px; border-radius:15px; display:flex; align-items:center; justify-content:center; margin-bottom:9px; color:#fff; box-shadow:0 10px 20px rgba(15,23,42,.10); }
+    .summary-icon.red { background:linear-gradient(135deg,#ef4444,#fb7185); }
+    .summary-icon.green { background:linear-gradient(135deg,#16a34a,#86efac); }
+    .summary-value { font-size:21px; line-height:1.08; font-weight:500; letter-spacing:-.035em; color:var(--text); max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .summary-label { font-size:11px; color:var(--muted); margin-bottom:4px; }
+    body.dark-mode .summary-hero { background:linear-gradient(145deg, rgba(15,23,42,.95), rgba(2,6,23,.92)); border-color:rgba(255,255,255,.10); }
+    body.dark-mode .summary-tile.offered { background:linear-gradient(145deg, rgba(239,68,68,.14), rgba(15,23,42,.76)); }
+    body.dark-mode .summary-tile.received { background:linear-gradient(145deg, rgba(22,163,74,.14), rgba(15,23,42,.76)); }
+
+    .month-card {
+      border-radius: 30px;
+      padding: 15px;
+      background: rgba(255,255,255,.92);
+      border: 1px solid rgba(15,23,42,.08);
+      box-shadow: 0 16px 42px rgba(15,23,42,.08), inset 0 1px 0 rgba(255,255,255,.94);
+      user-select: none;
+    }
+    body.dark-mode .month-card { background: rgba(15,23,42,.86); border-color: rgba(255,255,255,.10); }
+    .month-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:14px; }
+    .month-title { text-align:center; font-size:15px; font-weight:500; letter-spacing:-.02em; text-transform:capitalize; color:var(--text); }
+    .month-sub { text-align:center; font-size:11px; color:var(--muted); margin-top:2px; }
+    .month-nav { width:38px; height:38px; border-radius:15px; display:flex; align-items:center; justify-content:center; background:rgba(15,23,42,.055); color:var(--text); border:1px solid rgba(15,23,42,.07); }
+    body.dark-mode .month-nav { background:rgba(255,255,255,.06); border-color:rgba(255,255,255,.08); }
+    .week-grid { display:grid; grid-template-columns: repeat(7, minmax(0,1fr)); gap:6px; }
+    .week-label { text-align:center; font-size:9px; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; padding-bottom:5px; }
+    .month-day {
+      height: 42px;
+      border-radius: 16px;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      gap:3px;
+      background: transparent;
+      color: var(--text);
+      border: 1px solid transparent;
+      font-size: 13px;
+      font-weight: 450;
+      position:relative;
+    }
+    .month-day.outside { opacity:.28; }
+    .month-day.today { border-color: rgba(37,99,235,.22); background: rgba(37,99,235,.07); }
+    .month-day.active { background: linear-gradient(135deg,#0f172a,#2563eb); color:#fff; box-shadow:0 12px 24px rgba(37,99,235,.20); }
+    .day-dot { width:5px; height:5px; border-radius:99px; background:#ef4444; display:block; }
+    .month-day.active .day-dot { background:#fff; }
+    .selected-day-card { border-radius:22px; padding:13px 14px; background:linear-gradient(135deg, rgba(37,99,235,.09), rgba(255,255,255,.86)); border:1px solid rgba(15,23,42,.07); display:flex; align-items:center; justify-content:space-between; gap:12px; }
+    body.dark-mode .selected-day-card { background:linear-gradient(135deg, rgba(37,99,235,.16), rgba(15,23,42,.70)); border-color:rgba(255,255,255,.09); }
+    .theme-switch { width:54px; height:30px; border-radius:99px; padding:3px; background:rgba(15,23,42,.10); border:1px solid rgba(15,23,42,.08); display:flex; align-items:center; justify-content:flex-start; }
+    .theme-switch span { width:22px; height:22px; border-radius:99px; background:#fff; box-shadow:0 4px 10px rgba(15,23,42,.14); transition:transform .16s ease; }
+    body.dark-mode .theme-switch { background:rgba(37,99,235,.30); border-color:rgba(96,165,250,.25); justify-content:flex-end; }
+
+    .profile-goal-block { margin-top:14px; }
+    .profile-goal-title { display:flex; align-items:center; justify-content:space-between; margin:0 2px 10px; font-size:14px; color:var(--text); font-weight:500; }
+    .profile-goal-title small { color:var(--muted); font-size:11px; }
+
   </style>
 </head>
 <body>
@@ -451,11 +593,21 @@
     const todayISO = () => new Date().toISOString().split('T')[0];
     const addDays = (dateStr, days) => { const d = new Date(dateStr + 'T12:00:00'); d.setDate(d.getDate() + days); return d.toISOString().split('T')[0]; };
     const formatFullDate = (dateStr) => new Date(dateStr + 'T12:00:00').toLocaleDateString('ro-RO', { weekday:'long', day:'2-digit', month:'long' });
+    const formatMonthTitle = (dateStr) => new Date(dateStr + 'T12:00:00').toLocaleDateString('ro-RO', { month:'long', year:'numeric' });
+    const firstOfMonth = (dateStr) => { const d = new Date(dateStr + 'T12:00:00'); return new Date(d.getFullYear(), d.getMonth(), 1, 12).toISOString().split('T')[0]; };
+    const shiftMonth = (dateStr, months) => { const d = new Date(dateStr + 'T12:00:00'); d.setMonth(d.getMonth() + months, 1); return d.toISOString().split('T')[0]; };
+    const hasMoneyOnDate = (dateStr) => transactions.some(t => String(t.date).slice(0,10) === dateStr && Number(t.amount || 0) > 0);
     const getProfile = (email) => profiles.find(p => p.email === email);
     const getRole = (email) => email === currentUser?.email ? (getProfile(email)?.role || currentUser?.user_metadata?.role || 'sot') : (getProfile(email)?.role || 'sotie');
     const roleLabel = (role) => role === 'sotie' ? 'Soție' : 'Soț';
     const ownerLabel = (email) => email === currentUser?.email ? 'Tu' : roleLabel(getRole(email));
     const partnerEmail = () => profiles.find(p => p.email && p.email !== currentUser?.email)?.email || goals.find(g => g.owner !== currentUser?.email)?.owner || null;
+
+    function initTheme() {
+      const saved = localStorage.getItem('appTheme') || 'light';
+      document.body.classList.toggle('dark-mode', saved === 'dark');
+    }
+    initTheme();
 
     async function safeFetch(promise) { try { const { data, error } = await promise; if (error) { console.error(error); return []; } return data || []; } catch (error) { console.error(error); return []; } }
 
@@ -568,24 +720,24 @@
           </div>
         </div>
 
-        <div class="top-card">
-          <div class="flex items-center justify-between mb-4">
+        <div class="summary-hero">
+          <div class="summary-hero-top">
             <div>
-              <p class="muted text-xs">Rezumat</p>
-              <h3 class="text-xl font-medium tracking-[-.03em]">Mișcări familie</h3>
+              <p class="summary-sub">Rezumat familie</p>
+              <h3 class="summary-title">Banii dintre voi</h3>
             </div>
-            <button class="btn btn-soft" onclick="window.appActions.openCalendar()">Istoric</button>
+            <button class="summary-pill" onclick="window.appActions.openCalendar()">Calendar</button>
           </div>
           <div class="summary-grid">
             <div class="summary-tile offered">
               <div class="summary-icon red">${svg.back}</div>
-              <p class="muted text-xs">Ai oferit</p>
-              <p class="text-[20px] leading-tight font-medium truncate">${money(offered)} <span class="text-xs muted">RON</span></p>
+              <p class="summary-label">Ai oferit</p>
+              <p class="summary-value">${money(offered)} <span class="text-xs muted">RON</span></p>
             </div>
             <div class="summary-tile received">
               <div class="summary-icon green" style="transform:rotate(180deg)">${svg.back}</div>
-              <p class="muted text-xs">Ai primit</p>
-              <p class="text-[20px] leading-tight font-medium truncate">${money(received)} <span class="text-xs muted">RON</span></p>
+              <p class="summary-label">Ai primit</p>
+              <p class="summary-value">${money(received)} <span class="text-xs muted">RON</span></p>
             </div>
           </div>
         </div>
@@ -634,22 +786,37 @@
         </div>`;
     }
 
-    function calendarHTML() {
-      const days = [-1,0,1].map(n => addDays(selectedDate, n));
+    function monthCalendarHTML() {
+      const monthDate = new Date(selectedDate + 'T12:00:00');
+      const y = monthDate.getFullYear();
+      const m = monthDate.getMonth();
+      const first = new Date(y, m, 1, 12);
+      const startOffset = (first.getDay() + 6) % 7;
+      const gridStart = new Date(y, m, 1 - startOffset, 12);
+      const weekNames = ['Lu','Ma','Mi','Jo','Vi','Sâ','Du'];
+      const cells = [];
+      for (let i = 0; i < 42; i++) {
+        const d = new Date(gridStart);
+        d.setDate(gridStart.getDate() + i);
+        const iso = d.toISOString().split('T')[0];
+        const outside = d.getMonth() !== m;
+        const active = iso === selectedDate;
+        const today = iso === todayISO();
+        const dot = hasMoneyOnDate(iso);
+        cells.push(`<button class="month-day ${outside ? 'outside' : ''} ${today ? 'today' : ''} ${active ? 'active' : ''}" onclick="window.appActions.setDate('${iso}')"><span>${d.getDate()}</span>${dot ? '<span class="day-dot"></span>' : '<span style="height:5px"></span>'}</button>`);
+      }
       return `
-        <div class="calendar-card">
-          <div class="flex items-center justify-between mb-3">
-            <button class="btn btn-soft" aria-label="Ziua anterioară" onclick="window.appActions.shiftDate(-1)">${svg.back}</button>
-            <p class="calendar-month">${formatFullDate(selectedDate)}</p>
-            <button class="btn btn-soft" aria-label="Ziua următoare" onclick="window.appActions.shiftDate(1)" style="transform:rotate(180deg)">${svg.back}</button>
+        <div class="month-card">
+          <div class="month-head">
+            <button class="month-nav" onclick="window.appActions.shiftSelectedMonth(-1)" aria-label="Luna anterioară">${svg.back}</button>
+            <div>
+              <div class="month-title">${formatMonthTitle(selectedDate)}</div>
+              <div class="month-sub">punct roșu = zi cu bani</div>
+            </div>
+            <button class="month-nav" onclick="window.appActions.shiftSelectedMonth(1)" aria-label="Luna următoare" style="transform:rotate(180deg)">${svg.back}</button>
           </div>
-          <div class="calendar-compact">
-            ${days.map((d) => {
-              const date = new Date(d + 'T12:00:00');
-              const label = d === selectedDate ? 'Ales' : d === todayISO() ? 'Azi' : date.toLocaleDateString('ro-RO', { weekday: 'short' });
-              return `<button class="day-pill ${d === selectedDate ? 'active' : ''}" onclick="window.appActions.setDate('${d}')"><span class="day-label">${label}</span><span class="day-number">${date.getDate()}</span></button>`;
-            }).join('')}
-          </div>
+          <div class="week-grid mb-1">${weekNames.map(w => `<div class="week-label">${w}</div>`).join('')}</div>
+          <div class="week-grid">${cells.join('')}</div>
         </div>`;
     }
 
@@ -659,12 +826,14 @@
       return `
         ${backButton()}
         <div class="top-card mb-4">
-          <div class="flex items-center gap-3 mb-2"><span class="icon-btn">${svg.calendar}</span><div><p class="muted text-xs">Calendar</p><h2 class="text-2xl font-medium tracking-[-.03em]">Istoric bani</h2></div></div>
-          <p class="muted text-sm">Alege ziua cu butoanele. Fără glisare, ca să nu se mai blocheze.</p>
+          <div class="flex items-center gap-3"><span class="icon-btn">${svg.calendar}</span><div><p class="muted text-xs">Calendar</p><h2 class="text-2xl font-medium tracking-[-.03em]">Istoric bani</h2></div></div>
         </div>
-        ${calendarHTML()}
-        <div class="card mt-3 flex items-center justify-between">
-          <span class="text-sm muted">Toată ziua</span>
+        ${monthCalendarHTML()}
+        <div class="selected-day-card mt-3">
+          <div>
+            <p class="text-sm" style="color:var(--text)">${formatFullDate(selectedDate)}</p>
+            <p class="text-xs muted">Toată ziua</p>
+          </div>
           <span class="text-sm" style="color:${totalDay < 0 ? 'var(--danger)' : 'var(--success)'}">${totalDay >= 0 ? '+' : ''}${money(totalDay)} RON</span>
         </div>
         <div class="section"><div class="section-head"><span>Mișcări</span><small>${selectedTransactions.length}</small></div><div class="history-list space-y-2">${selectedTransactions.length ? selectedTransactions.map(transactionRow).join('') : emptyHTML('Nicio mișcare în ziua asta.')}</div></div>`;
@@ -687,6 +856,22 @@
         <div class="section"><div class="section-head"><span>Obiective finalizate</span><small>${done.length}</small></div><div class="space-y-3">${done.length ? done.map(g => goalCard(g,false)).join('') : emptyHTML('Nimic aici momentan.')}</div></div>`;
     }
 
+    function profileGoalSections(email, isMine) {
+      const list = goals.filter(g => g.owner === email);
+      const active = list.filter(g => Number(g.current || 0) < Number(g.target || 0));
+      const done = list.filter(g => Number(g.current || 0) >= Number(g.target || 0));
+      const renderList = (items, empty) => items.length ? items.map(g => goalCard(g, isMine)).join('') : emptyHTML(empty);
+      return `
+        <div class="profile-goal-block">
+          <div class="profile-goal-title"><span>Obiective active</span><small>${active.length}</small></div>
+          <div class="space-y-3">${renderList(active, 'Nu există obiective active.')}</div>
+        </div>
+        <div class="profile-goal-block">
+          <div class="profile-goal-title"><span>Obiective finalizate</span><small>${done.length}</small></div>
+          <div class="space-y-3">${renderList(done, 'Nu există obiective finalizate.')}</div>
+        </div>`;
+    }
+
     function profileHTML() {
       const role = getRole(currentUser.email);
       return `
@@ -703,10 +888,11 @@
         </div>
         <div class="card flex items-center justify-between mb-3">
           <div class="flex items-center gap-3"><span class="icon-btn">${svg.moon}</span><span class="text-sm">Mod întunecat</span></div>
-          <button class="btn btn-gold" onclick="window.appActions.toggleTheme()">Schimbă</button>
+          <button class="theme-switch" onclick="window.appActions.toggleTheme()" aria-label="Schimbă tema"><span></span></button>
         </div>
         <div class="card mb-3"><p class="text-sm muted">Datele se salvează pe contul vostru și se sincronizează între telefoane prin Supabase.</p></div>
-        <button class="btn btn-danger btn-full flex items-center justify-center gap-2" onclick="window.appActions.logout()">${svg.logOut} Deconectare</button>`;
+        ${profileGoalSections(currentUser.email, true)}
+        <button class="btn btn-danger btn-full flex items-center justify-center gap-2 mt-4" onclick="window.appActions.logout()">${svg.logOut} Deconectare</button>`;
     }
 
     function calculatorHTML() {
@@ -811,6 +997,7 @@
       openStats(id) { selectedGoalId = id; previousPage = currentPage; currentPage = 'goalStats'; renderApp(); },
       setDate(d) { selectedDate = d; renderApp(); },
       shiftDate(n) { selectedDate = addDays(selectedDate, n); renderApp(); },
+      shiftSelectedMonth(n) { selectedDate = shiftMonth(selectedDate, n); renderApp(); },
       swipeStart(e) { if (e.target.closest('button')) return; swipeStartX = e.clientX; swipeMoved = true; },
       swipeEnd(e) { if (!swipeMoved) return; const diff = e.clientX - swipeStartX; swipeMoved = false; if (Math.abs(diff) > 45) this.shiftDate(diff < 0 ? 1 : -1); },
       swipeCancel() { swipeMoved = false; },
@@ -826,22 +1013,32 @@
         if (!title || !Number.isFinite(target) || target <= 0) return alert('Date invalide.');
         const btn = document.getElementById('saveGoalBtn');
         btn.textContent = 'Salvez...'; btn.disabled = true;
+        let localGoal = null;
         try {
           if (!currentUser?.email) {
             const { data: sessionData } = await supabase.auth.getSession();
             currentUser = sessionData.session?.user || currentUser;
           }
           if (!currentUser?.email) throw new Error('Nu ești conectat. Reconectează-te și încearcă iar.');
-          const payload = { title, target, current: 0, owner: currentUser.email, created_at: new Date().toISOString() };
-          const { data, error } = await supabase.from('goals').insert(payload).select('*').maybeSingle();
-          if (error) throw error;
-          goals.unshift(data || { id: crypto.randomUUID(), ...payload });
+          localGoal = { id: crypto.randomUUID(), title, target, current: 0, owner: currentUser.email, created_at: new Date().toISOString() };
+          goals.unshift(localGoal);
           this.closeModal();
           renderApp();
+
+          const rpc = await supabase.rpc('create_goal_safe', { p_title: title, p_target: target });
+          if (rpc.error) {
+            const direct = await supabase.from('goals').insert({ title, target, current: 0, owner: currentUser.email }).select('*').maybeSingle();
+            if (direct.error) throw direct.error;
+            if (direct.data) goals = goals.map(g => g.id === localGoal.id ? direct.data : g);
+          } else if (rpc.data) {
+            goals = goals.map(g => g.id === localGoal.id ? rpc.data : g);
+          }
+          renderApp(true);
           scheduleSoftRefresh();
         } catch (error) {
+          if (localGoal) goals = goals.filter(g => g.id !== localGoal.id);
+          renderApp();
           alert('Eroare la obiectiv: ' + (error.message || error));
-          btn.textContent = 'Salvează'; btn.disabled = false;
         }
       },
       openMoney(id, mode) {
@@ -851,25 +1048,55 @@
         modal.innerHTML = `<div class="modal-backdrop"><div class="sheet"><div class="grab"></div><h3 class="text-xl font-medium mb-1">${title}</h3><p class="text-sm muted mb-4">${escapeHTML(String(g.title || '').toUpperCase())}</p><div class="space-y-3"><input id="moneyAmountInput" type="number" class="input" placeholder="RON"><div class="grid grid-cols-2 gap-2 pt-2"><button class="btn btn-soft btn-full" onclick="window.appActions.closeModal()">Anulează</button><button id="moneyBtn" class="btn btn-gold btn-full" onclick="window.appActions.applyMoney('${id}','${mode}')">${action}</button></div></div></div></div>`;
       },
       async applyMoney(id, mode) {
-        const amountRaw = parseFloat(document.getElementById('moneyAmountInput').value);
+        const amountRaw = parseFloat(document.getElementById('moneyAmountInput')?.value || '');
         const g = goals.find(x => x.id === id);
         if (!g || !amountRaw || amountRaw <= 0) return alert('Sumă invalidă.');
         if (mode === 'remove' && g.owner !== currentUser.email) return alert('Poți scoate doar din obiectivul tău.');
         if (mode === 'remove' && amountRaw > Number(g.current || 0)) return alert('Nu poți scoate mai mult decât există.');
+
         const old = Number(g.current || 0);
         const delta = mode === 'remove' ? -amountRaw : amountRaw;
-        let next = Math.max(0, old + delta);
-        const btn = document.getElementById('moneyBtn'); btn.textContent = 'Salvez...'; btn.disabled = true;
-        const rpc = await supabase.rpc('adjust_goal_amount', { p_goal_id: id, p_delta: delta });
-        if (rpc.error) {
-          const upd = await supabase.from('goals').update({ current: next }).eq('id', id);
-          if (upd.error) { alert(upd.error.message); this.closeModal(); return; }
-        } else if (rpc.data !== null && rpc.data !== undefined) next = Number(rpc.data);
-        await supabase.from('transactions').insert([{ goal_id:id, goal_title:String(g.title || '').toUpperCase(), amount:delta, from_role:currentUser.email, to_role:g.owner, date:todayISO(), timestamp:new Date().toISOString() }]);
-        g.current = next;
-        this.closeModal(); renderApp();
-        if (old < Number(g.target || 0) && next >= Number(g.target || 0)) showConfetti();
-        scheduleSoftRefresh();
+        const optimistic = Math.max(0, old + delta);
+        const btn = document.getElementById('moneyBtn');
+        if (btn) { btn.textContent = 'Gata...'; btn.disabled = true; }
+
+        g.current = optimistic;
+        const localTransaction = {
+          id: 'local-' + Date.now(),
+          goal_id: id,
+          goal_title: String(g.title || '').toUpperCase(),
+          amount: delta,
+          from_role: currentUser.email,
+          to_role: g.owner,
+          date: todayISO(),
+          timestamp: new Date().toISOString()
+        };
+        transactions.unshift(localTransaction);
+        this.closeModal();
+        renderApp();
+        if (old < Number(g.target || 0) && optimistic >= Number(g.target || 0)) showConfetti();
+
+        try {
+          const rpc = await supabase.rpc('adjust_goal_amount', { p_goal_id: id, p_delta: delta });
+          let finalAmount = optimistic;
+          if (rpc.error) {
+            const upd = await supabase.from('goals').update({ current: optimistic }).eq('id', id).select('current').maybeSingle();
+            if (upd.error) throw upd.error;
+            if (upd.data?.current !== undefined) finalAmount = Number(upd.data.current);
+          } else if (rpc.data !== null && rpc.data !== undefined) finalAmount = Number(rpc.data);
+
+          const tr = await supabase.from('transactions').insert([{ goal_id:id, goal_title:String(g.title || '').toUpperCase(), amount:delta, from_role:currentUser.email, to_role:g.owner, date:todayISO(), timestamp:new Date().toISOString() }]).select('*').maybeSingle();
+          if (tr.error) throw tr.error;
+          g.current = finalAmount;
+          if (tr.data) transactions = transactions.map(t => t.id === localTransaction.id ? tr.data : t);
+          renderApp(true);
+          scheduleSoftRefresh();
+        } catch (error) {
+          g.current = old;
+          transactions = transactions.filter(t => t.id !== localTransaction.id);
+          renderApp();
+          alert('Eroare la bani: ' + (error.message || error));
+        }
       },
       async uploadAvatar(e) {
         const file = e.target.files[0]; if (!file) return;
@@ -885,7 +1112,7 @@
         };
         reader.readAsDataURL(file);
       },
-      toggleTheme() { document.body.classList.toggle('light-mode'); },
+      toggleTheme() { const dark = document.body.classList.toggle('dark-mode'); localStorage.setItem('appTheme', dark ? 'dark' : 'light'); },
       async logout() { await supabase.auth.signOut(); localStorage.removeItem('keepLogged'); currentUser = null; authHTML(true); },
       calcPress(v) { if (v === 'C') { calcExpression=''; calcResult='0'; renderApp(); return; } calcExpression += v === '×' ? '*' : v === '÷' ? '/' : v; renderApp(); },
       calcBack() { calcExpression = calcExpression.slice(0,-1); renderApp(); },
