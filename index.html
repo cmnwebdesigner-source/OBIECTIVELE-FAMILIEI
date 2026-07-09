@@ -38,18 +38,6 @@
 </head>
 <body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 antialiased min-h-screen transition-colors duration-300">
 
-    <!-- Install App Banner (Hidden by default) -->
-    <div id="installBanner" class="hidden fixed top-0 w-full z-50 bg-indigo-600 text-white px-4 py-3 shadow-lg flex justify-between items-center fade-in">
-        <div class="flex items-center gap-3">
-            <i class="fas fa-arrow-down rounded-lg bg-white/20 p-2"></i>
-            <span class="text-sm font-medium" id="installText">Instalează aplicația pe ecran!</span>
-        </div>
-        <div class="flex gap-2">
-            <button id="installBtn" class="px-3 py-1 bg-white text-indigo-600 rounded-lg text-sm font-bold shadow-sm hidden">Instalează</button>
-            <button onclick="document.getElementById('installBanner').classList.add('hidden')" class="px-2 py-1 text-white/80 hover:text-white"><i class="fas fa-times"></i></button>
-        </div>
-    </div>
-
     <div id="app" class="max-w-md mx-auto min-h-screen flex flex-col relative pb-20 shadow-2xl bg-slate-50 dark:bg-slate-900">
         <!-- Content will be injected here -->
     </div>
@@ -85,32 +73,14 @@
         };
         initTheme();
 
-        // PWA Install Logic
+        // PWA Install Logic (Fara Banner UI)
         const initPWA = () => {
-            const isIos = () => /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCase());
-            const isInStandaloneMode = () => ('standalone' in window.navigator) && (window.navigator.standalone);
-
             window.addEventListener('beforeinstallprompt', (e) => {
+                // Previne aparitia prompt-ului automat in unele browsere
                 e.preventDefault();
+                // Salveaza evenimentul in spate pentru a fi folosit ulterior daca e nevoie
                 deferredPrompt = e;
-                const banner = document.getElementById('installBanner');
-                const btn = document.getElementById('installBtn');
-                banner.classList.remove('hidden');
-                btn.classList.remove('hidden');
-                
-                btn.addEventListener('click', async () => {
-                    deferredPrompt.prompt();
-                    const { outcome } = await deferredPrompt.userChoice;
-                    if (outcome === 'accepted') banner.classList.add('hidden');
-                    deferredPrompt = null;
-                });
             });
-
-            if (isIos() && !isInStandaloneMode()) {
-                const banner = document.getElementById('installBanner');
-                document.getElementById('installText').innerHTML = "Apasă <i class='fas fa-share-square mx-1'></i> și <b>Add to Home Screen</b>";
-                banner.classList.remove('hidden');
-            }
         };
         initPWA();
 
@@ -588,7 +558,16 @@
                 const btn = document.getElementById('saveGoalBtn');
                 btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; btn.disabled = true;
 
-                await supabase.from('goals').insert([{ title, target, current: 0, owner: currentUser.email }]);
+                const { error } = await supabase.from('goals').insert([{ title, target, current: 0, owner: currentUser.email }]);
+                
+                if (error) {
+                    alert("Eroare la adăugare: " + error.message + "\n\n(Dacă e prima dată când folosești aplicația, asigură-te că ai creat tabelele în Supabase din SQL Editor)");
+                    btn.innerHTML = 'Salvează';
+                    btn.disabled = false;
+                    return;
+                }
+
+                await fetchData(); // Actualizam interfata instantaneu
                 window.appActions.closeModal();
             },
 
@@ -626,7 +605,14 @@
                 btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; btn.disabled = true;
 
                 const newAmount = Number(goal.current) + amount;
-                await supabase.from('goals').update({ current: newAmount }).eq('id', goalId);
+                
+                const { error: updateError } = await supabase.from('goals').update({ current: newAmount }).eq('id', goalId);
+                
+                if (updateError) {
+                    alert("Eroare la trimitere: " + updateError.message);
+                    window.appActions.closeModal();
+                    return;
+                }
                 
                 await supabase.from('transactions').insert([{
                     goal_id: goalId, goal_title: goal.title, amount: amount,
@@ -634,6 +620,7 @@
                     date: new Date().toISOString().split('T')[0], timestamp: new Date().toISOString()
                 }]);
 
+                await fetchData(); // Actualizam interfata instantaneu dupa ce am dat banii
                 window.appActions.closeModal();
             }
         };
