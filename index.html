@@ -625,15 +625,39 @@
 
 
     .family-code-card {
-      margin-top: 12px;
-      padding: 12px;
-      border-radius: 18px;
+      margin-top: 10px;
+      padding: 10px;
+      border-radius: 16px;
     }
-    .family-code-row { display:grid; grid-template-columns: minmax(0, 1fr) auto; gap:8px; align-items:end; }
-    .family-code-card .input { padding: 11px 12px; border-radius: 14px; font-size: 13px; }
-    .family-code-card .btn { padding: 11px 13px; border-radius: 14px; white-space: nowrap; }
-    .family-code-note { font-size: 10.5px; color: var(--muted); line-height: 1.35; margin-top: 7px; }
-    .family-save-status { min-height: 18px; margin-top: 6px; font-size: 12px; color: var(--success); font-weight: 500; }
+    .family-code-row { display:grid; grid-template-columns: minmax(0, 1fr) auto; gap:7px; align-items:end; }
+    .family-code-card .label { font-size: 10px; margin-bottom: 4px; }
+    .family-code-card .input { padding: 9px 10px; border-radius: 12px; font-size: 12px; min-height: 39px; }
+    .family-code-card .btn { padding: 9px 11px; border-radius: 12px; white-space: nowrap; min-height: 39px; font-size: 12px; }
+    .family-code-note { font-size: 9.5px; color: var(--muted); line-height: 1.25; margin-top: 5px; }
+    .family-save-status { min-height: 16px; margin-top: 4px; font-size: 11px; color: var(--success); font-weight: 500; }
+    .profile-category-grid { display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom: 14px; }
+    .profile-category-card {
+      border: 1px solid var(--line);
+      background: var(--card);
+      border-radius: 20px;
+      padding: 14px;
+      min-height: 92px;
+      display:flex;
+      flex-direction:column;
+      justify-content:space-between;
+      box-shadow: 0 14px 34px rgba(15,23,42,.06);
+      text-align:left;
+      transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease;
+    }
+    .profile-category-card:active { transform: scale(.985); }
+    .profile-category-card span { font-size: 13px; color: var(--text); line-height:1.2; }
+    .profile-category-card strong { font-size: 24px; font-weight: 450; letter-spacing:-.04em; color: var(--text); line-height:1; }
+    .profile-category-card small { color: var(--muted); font-size: 10px; display:flex; align-items:center; gap:4px; }
+    .profile-category-card.active-cat { border-color: rgba(59,130,246,.22); background: linear-gradient(145deg, rgba(59,130,246,.12), var(--card)); }
+    .profile-category-card.done-cat { border-color: rgba(34,197,94,.22); background: linear-gradient(145deg, rgba(34,197,94,.12), var(--card)); }
+    .profile-category-card.common-cat { border-color: rgba(245,158,11,.25); background: linear-gradient(145deg, rgba(245,158,11,.13), var(--card)); }
+    .goal-list-page-title { font-size: 26px; line-height: 1.05; letter-spacing:-.04em; font-weight: 450; margin-top: 4px; }
+    .goal-list-page-sub { font-size: 12px; color: var(--muted); margin-top: 6px; }
     .profile-header { position: relative; }
     .profile-menu-btn { position:absolute; top:0; right:0; }
     .about-card h3 { font-size: 14px; font-weight: 500; margin: 0 0 5px; color: var(--text); }
@@ -675,6 +699,9 @@
     let completedNotified = new Set();
     let dataLoadedOnce = false;
     let familyCode = '';
+    let familyCodeStatus = '';
+    let selectedGoalListKind = '';
+    let selectedGoalListEmail = '';
     const DEFAULT_FAMILY_CODE = '0706';
     window.selectedSignupRole = 'sot';
 
@@ -844,6 +871,7 @@
       else if (currentPage === 'calculator') { content = calculatorHTML(); nav = false; }
       else if (currentPage === 'calendar') { content = calendarPageHTML(); nav = false; }
       else if (currentPage === 'goalStats') { content = statsHTML(); nav = false; }
+      else if (currentPage === 'goalList') { content = goalListPageHTML(); nav = false; }
       else content = homeHTML();
       app.innerHTML = `<div class="screen ${nav ? '' : 'no-nav'}">${content}</div>${nav ? bottomNavHTML() : ''}`;
       if (soft) requestAnimationFrame(() => { const s = app.querySelector('.screen'); if (s) s.scrollTop = scrollTop; });
@@ -1029,9 +1057,6 @@
     function partnerHTML() {
       const pEmail = partnerEmail();
       const pRole = pEmail ? getRole(pEmail) : (getRole(currentUser.email) === 'sot' ? 'sotie' : 'sot');
-      const list = goals.filter(g => !isCommonGoal(g) && g.owner !== currentUser.email && goalBelongsToFamily(g));
-      const active = list.filter(g => Number(g.current || 0) < Number(g.target || 0));
-      const done = list.filter(g => Number(g.current || 0) >= Number(g.target || 0));
       return `
         ${backButton()}
         <div class="top-card text-center">
@@ -1039,24 +1064,63 @@
           <h2 class="text-2xl font-medium">${roleLabel(pRole)}</h2>
           <p class="text-xs muted mt-1">${pEmail || 'Profil partener'}</p>
         </div>
-        <div class="section"><div class="section-head"><span>Obiective în curs</span><small>${active.length}</small></div><div class="space-y-3">${active.length ? active.map(g => goalCard(g,false)).join('') : emptyHTML('Nimic aici momentan.')}</div></div>
-        <div class="section"><div class="section-head"><span>Obiective finalizate</span><small>${done.length}</small></div><div class="space-y-3">${done.length ? done.map(g => goalCard(g,false)).join('') : emptyHTML('Nimic aici momentan.')}</div></div>
+        ${profileGoalSections(pEmail || '', false)}
         ${commonGoalSections()}`;
     }
 
-    function profileGoalSections(email, isMine) {
+    function goalCategoryTile(title, count, kind, email, tone = 'active-cat') {
+      return `
+        <button class="profile-category-card ${tone}" onclick="window.appActions.openGoalCategory('${kind}', '${encodeURIComponent(email || '')}')">
+          <span>${title}</span>
+          <strong>${count}</strong>
+          <small>Deschide ${svg.back.replace('width="18" height="18"', 'width="12" height="12"').replace('M15 18 9 12l6-6', 'M9 18l6-6-6-6')}</small>
+        </button>`;
+    }
+
+    function getGoalListForCategory(kind, email) {
+      if (kind === 'common_active' || kind === 'common_done') {
+        const common = goals.filter(g => isCommonGoal(g) && goalBelongsToFamily(g));
+        return kind === 'common_active'
+          ? common.filter(g => Number(g.current || 0) < Number(g.target || 0))
+          : common.filter(g => Number(g.current || 0) >= Number(g.target || 0));
+      }
       const list = goals.filter(g => !isCommonGoal(g) && g.owner === email && goalBelongsToFamily(g));
+      return kind === 'owner_done'
+        ? list.filter(g => Number(g.current || 0) >= Number(g.target || 0))
+        : list.filter(g => Number(g.current || 0) < Number(g.target || 0));
+    }
+
+    function goalListTitle(kind) {
+      if (kind === 'common_active') return 'Obiective comune active';
+      if (kind === 'common_done') return 'Obiective comune finalizate';
+      if (kind === 'owner_done') return 'Obiective finalizate';
+      return 'Obiective active';
+    }
+
+    function goalListPageHTML() {
+      const email = decodeURIComponent(selectedGoalListEmail || '');
+      const list = getGoalListForCategory(selectedGoalListKind || 'owner_active', email);
+      const title = goalListTitle(selectedGoalListKind || 'owner_active');
+      const isCommon = String(selectedGoalListKind || '').startsWith('common');
+      const subtitle = isCommon ? 'Obiectivele voastre comune' : (email === currentUser.email ? 'Obiectivele tale' : 'Obiectivele partenerului');
+      return `
+        ${backButton()}
+        <div class="top-card mb-4">
+          <p class="muted text-xs">${subtitle}</p>
+          <h2 class="goal-list-page-title">${title}</h2>
+          <p class="goal-list-page-sub">${list.length} ${list.length === 1 ? 'obiectiv' : 'obiective'}</p>
+        </div>
+        <div class="space-y-3">${list.length ? list.map(g => goalCard(g, g.owner === currentUser.email)).join('') : emptyHTML('Nu există obiective aici momentan.')}</div>`;
+    }
+
+    function profileGoalSections(email, isMine) {
+      const list = email ? goals.filter(g => !isCommonGoal(g) && g.owner === email && goalBelongsToFamily(g)) : [];
       const active = list.filter(g => Number(g.current || 0) < Number(g.target || 0));
       const done = list.filter(g => Number(g.current || 0) >= Number(g.target || 0));
-      const renderList = (items, empty) => items.length ? items.map(g => goalCard(g, isMine)).join('') : emptyHTML(empty);
       return `
-        <div class="profile-goal-block">
-          <div class="profile-goal-title"><span>Obiective active</span><small>${active.length}</small></div>
-          <div class="space-y-3">${renderList(active, 'Nu există obiective active.')}</div>
-        </div>
-        <div class="profile-goal-block">
-          <div class="profile-goal-title"><span>Obiective finalizate</span><small>${done.length}</small></div>
-          <div class="space-y-3">${renderList(done, 'Nu există obiective finalizate.')}</div>
+        <div class="profile-category-grid">
+          ${goalCategoryTile('Obiective active', active.length, 'owner_active', email, 'active-cat')}
+          ${goalCategoryTile('Obiective finalizate', done.length, 'owner_done', email, 'done-cat')}
         </div>`;
     }
 
@@ -1064,15 +1128,10 @@
       const list = goals.filter(g => isCommonGoal(g) && goalBelongsToFamily(g));
       const active = list.filter(g => Number(g.current || 0) < Number(g.target || 0));
       const done = list.filter(g => Number(g.current || 0) >= Number(g.target || 0));
-      const renderList = (items, empty) => items.length ? items.map(g => goalCard(g, g.owner === currentUser.email)).join('') : emptyHTML(empty);
       return `
-        <div class="profile-goal-block">
-          <div class="profile-goal-title"><span>Obiective comune active</span><small>${active.length}</small></div>
-          <div class="space-y-3">${renderList(active, 'Nu există obiective comune active.')}</div>
-        </div>
-        <div class="profile-goal-block">
-          <div class="profile-goal-title"><span>Obiective comune finalizate</span><small>${done.length}</small></div>
-          <div class="space-y-3">${renderList(done, 'Nu există obiective comune finalizate.')}</div>
+        <div class="profile-category-grid">
+          ${goalCategoryTile('Comune active', active.length, 'common_active', '', 'common-cat')}
+          ${goalCategoryTile('Comune finalizate', done.length, 'common_done', '', 'common-cat done-cat')}
         </div>`;
     }
 
@@ -1107,8 +1166,8 @@
             </div>
             <button class="btn btn-soft" onclick="window.appActions.saveFamilyCode()">Salvează</button>
           </div>
-          <div id="familyCodeSavedStatus" class="family-save-status"></div>
-          <p class="family-code-note">Codul vostru: 0706. Ambele conturi trebuie să aibă același cod.</p>
+          <div id="familyCodeSavedStatus" class="family-save-status">${familyCodeStatus || (familyCode ? 'Salvat' : '')}</div>
+          <p class="family-code-note">Poți modifica oricând codul. Pentru voi: 0706.</p>
         </div>
         ${profileGoalSections(currentUser.email, true)}
         ${commonGoalSections()}`;
@@ -1221,6 +1280,7 @@
       openCalculator() { previousPage = currentPage; currentPage = 'calculator'; renderApp(); },
       openCalendar() { previousPage = currentPage; currentPage = 'calendar'; renderApp(); },
       openStats(id) { selectedGoalId = id; previousPage = currentPage; currentPage = 'goalStats'; renderApp(); },
+      openGoalCategory(kind, encodedEmail = '') { selectedGoalListKind = kind; selectedGoalListEmail = encodedEmail; previousPage = currentPage; currentPage = 'goalList'; renderApp(); },
       setDate(d) { selectedDate = d; renderApp(); },
       shiftDate(n) { selectedDate = addDays(selectedDate, n); renderApp(); },
       shiftSelectedMonth(n) { selectedDate = shiftMonth(selectedDate, n); renderApp(); },
@@ -1416,11 +1476,9 @@
           dataLoadedOnce = false;
           completedNotified = new Set();
           await fetchData({ soft: true });
+          familyCodeStatus = 'Salvat';
           const saved = document.getElementById('familyCodeSavedStatus');
-          if (saved) {
-            saved.textContent = 'Salvat';
-            setTimeout(() => { if (saved) saved.textContent = ''; }, 2200);
-          }
+          if (saved) saved.textContent = 'Salvat';
         } catch (error) {
           familyCode = oldCode;
           localStorage.setItem(userFamilyStorageKey(), familyCode);
