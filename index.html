@@ -7,15 +7,86 @@
   <meta name="theme-color" content="#f4f7fb" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="Obiectivele Familiei" />
-  <link rel="icon" type="image/jpeg" href="https://i.postimg.cc/ZRsSkkFf/17330b7e-b007-47f5-a72d-26d1b1073865.jpg" />
-  <link rel="apple-touch-icon" href="https://i.postimg.cc/ZRsSkkFf/17330b7e-b007-47f5-a72d-26d1b1073865.jpg" />
+  <link rel="icon" type="image/png" href="" />
+  <link rel="apple-touch-icon" href="" />
   <link id="dynamicManifest" rel="manifest" href="" />
   <script>
     (() => {
-      const icon = 'https://i.postimg.cc/ZRsSkkFf/17330b7e-b007-47f5-a72d-26d1b1073865.jpg';
-      const manifest = { name:'Obiectivele Familiei Coman', short_name:'Familie Coman', start_url:'.', display:'standalone', background_color:'#f4f7fb', theme_color:'#f4f7fb', icons:[{ src:icon, sizes:'512x512', type:'image/jpeg', purpose:'any maskable' }] };
-      const blob = new Blob([JSON.stringify(manifest)], { type:'application/manifest+json' });
-      window.addEventListener('DOMContentLoaded', () => { const el = document.getElementById('dynamicManifest'); if (el) el.href = URL.createObjectURL(blob); });
+      const createHomeScreenIcon = (size = 512) => {
+        const canvas = document.createElement('canvas');
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return '';
+
+        const roundRect = (x, y, w, h, r) => {
+          const rr = Math.min(r, w / 2, h / 2);
+          ctx.beginPath();
+          ctx.moveTo(x + rr, y);
+          ctx.arcTo(x + w, y, x + w, y + h, rr);
+          ctx.arcTo(x + w, y + h, x, y + h, rr);
+          ctx.arcTo(x, y + h, x, y, rr);
+          ctx.arcTo(x, y, x + w, y, rr);
+          ctx.closePath();
+        };
+
+        ctx.clearRect(0, 0, size, size);
+
+        const bgGrad = ctx.createLinearGradient(0, 0, size, size);
+        bgGrad.addColorStop(0, '#ffffff');
+        bgGrad.addColorStop(0.6, '#f4f7fb');
+        bgGrad.addColorStop(1, '#eaf1fb');
+        roundRect(size * 0.08, size * 0.08, size * 0.84, size * 0.84, size * 0.19);
+        ctx.fillStyle = bgGrad;
+        ctx.fill();
+
+        ctx.lineWidth = Math.max(4, size * 0.012);
+        ctx.strokeStyle = 'rgba(37,99,235,.14)';
+        ctx.stroke();
+
+        const halo = ctx.createRadialGradient(size * 0.5, size * 0.5, size * 0.05, size * 0.5, size * 0.5, size * 0.34);
+        halo.addColorStop(0, 'rgba(37,99,235,.22)');
+        halo.addColorStop(1, 'rgba(37,99,235,0)');
+        ctx.beginPath();
+        ctx.arc(size * 0.5, size * 0.5, size * 0.24, 0, Math.PI * 2);
+        ctx.fillStyle = halo;
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.arc(size * 0.5, size * 0.5, size * 0.11, 0, Math.PI * 2);
+        ctx.fillStyle = '#2563eb';
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.arc(size * 0.5, size * 0.5, size * 0.055, 0, Math.PI * 2);
+        ctx.fillStyle = '#60a5fa';
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.arc(size * 0.46, size * 0.44, size * 0.018, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255,255,255,.92)';
+        ctx.fill();
+
+        return canvas.toDataURL('image/png');
+      };
+
+      const icon = createHomeScreenIcon(512);
+      window.HOME_SCREEN_ICON_URL = icon;
+      const manifest = {
+        name: 'Obiectivele Familiei Coman',
+        short_name: 'Familie Coman',
+        start_url: '.',
+        display: 'standalone',
+        background_color: '#f4f7fb',
+        theme_color: '#f4f7fb',
+        icons: [{ src: icon, sizes: '512x512', type: 'image/png', purpose: 'any maskable' }]
+      };
+      const blob = new Blob([JSON.stringify(manifest)], { type: 'application/manifest+json' });
+      window.addEventListener('DOMContentLoaded', () => {
+        const manifestEl = document.getElementById('dynamicManifest');
+        if (manifestEl) manifestEl.href = URL.createObjectURL(blob);
+        document.querySelectorAll('link[rel="icon"], link[rel="apple-touch-icon"]').forEach(el => { el.href = icon; });
+      });
     })();
   </script>
   <script src="https://cdn.tailwindcss.com"></script>
@@ -825,6 +896,16 @@
       flex-shrink:0;
     }
     .piggy-icon-box svg { width:50px; height:50px; }
+    .piggy-top-image {
+      width: 54px;
+      height: 54px;
+      object-fit: contain;
+      display: block;
+      background: transparent;
+      filter: drop-shadow(0 8px 14px rgba(15,23,42,.08));
+      user-select: none;
+      -webkit-user-drag: none;
+    }
     .piggy-head-label { font-size:11px; color:var(--muted); line-height:1; }
     .piggy-head-value { margin-top:4px; font-size:18px; font-weight:450; letter-spacing:-.035em; color:var(--text); white-space:nowrap; }
     .piggy-card {
@@ -1150,7 +1231,8 @@
 
     const money = (v) => Number(v || 0).toLocaleString('ro-RO', { maximumFractionDigits: 2 });
 
-    const appIconUrl = 'https://i.postimg.cc/ZRsSkkFf/17330b7e-b007-47f5-a72d-26d1b1073865.jpg';
+    const appIconUrl = window.HOME_SCREEN_ICON_URL || '';
+    const piggyTopIconUrl = 'https://i.postimg.cc/vTJqVMdD/banc-de-purceli-ilustrarea-unui-desen-animat-unic-al-unei-bnci-cei-cu-monede-dolari-17106942.webp';
     let eurRateCache = { date: '', rate: null };
     const goalCurrency = (goal) => String(goal?.currency || 'RON').toUpperCase() === 'EUR' ? 'EUR' : 'RON';
     const transactionCurrency = (t) => String(t?.currency || 'RON').toUpperCase() === 'EUR' ? 'EUR' : 'RON';
@@ -1533,7 +1615,7 @@
         <div class="flex items-center justify-between mb-5 gap-3">
           <div class="top-feature-row">
             <button class="top-piggy" onclick="window.appActions.openPiggy()" aria-label="Deschide pușculița">
-              <div class="piggy-icon-box">${svg.pig}</div>
+              <div class="piggy-icon-box"><img src="${piggyTopIconUrl}" alt="Pușculiță" class="piggy-top-image" draggable="false"></div>
             </button>
           </div>
           <div class="quick-actions">
@@ -2704,9 +2786,30 @@ function piggyPageHTML() {
         const remaining = Math.max(0, Number(g.target || 0) - Number(g.current || 0));
         const currency = goalCurrency(g);
         const limitText = currency === 'EUR'
-          ? (mode === 'remove' ? `Obiectiv în EURO. Tu scrii suma în LEI, iar aplicația o transformă automat în euro.` : `Obiectiv în EURO. Tu scrii suma în LEI, iar aplicația o transformă automat în euro.`)
+          ? (mode === 'remove' ? 'Se calculează suma maximă în RON...' : 'Se calculează suma maximă în RON pentru acest obiectiv în EURO...')
           : (mode === 'remove' ? `Poți scoate maxim ${money(Number(g.current || 0))} RON.` : `Poți pune maxim ${money(remaining)} RON, cât lipsește până la obiectiv.`);
-        modal.innerHTML = `<div class="modal-backdrop"><div class="sheet"><div class="grab"></div><h3 class="text-xl font-medium mb-1">${title}</h3><p class="text-sm muted mb-1">${escapeHTML(String(g.title || '').toUpperCase())}</p><p class="edit-goal-hint mb-4">${limitText}</p><div class="space-y-3"><input id="moneyAmountInput" type="text" inputmode="decimal" class="input" placeholder="Suma în RON" autocomplete="off"><div class="grid grid-cols-2 gap-2 pt-2"><button class="btn btn-soft btn-full" onclick="window.appActions.closeModal()">Anulează</button><button id="moneyBtn" class="btn btn-gold btn-full" onclick="window.appActions.applyMoney('${id}','${mode}')">${action}</button></div></div></div></div>`;
+        modal.innerHTML = `<div class="modal-backdrop"><div class="sheet"><div class="grab"></div><h3 class="text-xl font-medium mb-1">${title}</h3><p class="text-sm muted mb-1">${escapeHTML(String(g.title || '').toUpperCase())}</p><p id="moneyLimitHint" class="edit-goal-hint mb-4">${limitText}</p><div class="space-y-3"><input id="moneyAmountInput" type="text" inputmode="decimal" class="input" placeholder="Suma în RON" autocomplete="off"><div class="grid grid-cols-2 gap-2 pt-2"><button class="btn btn-soft btn-full" onclick="window.appActions.closeModal()">Anulează</button><button id="moneyBtn" class="btn btn-gold btn-full" onclick="window.appActions.applyMoney('${id}','${mode}')">${action}</button></div></div></div></div>`;
+
+        if (currency === 'EUR') {
+          const hintEl = document.getElementById('moneyLimitHint');
+          const currentEur = Number(g.current || 0);
+          const remainingEur = Math.max(0, Number(g.target || 0) - Number(g.current || 0));
+          getTodayEurRate().then(rate => {
+            const liveHintEl = document.getElementById('moneyLimitHint');
+            if (!liveHintEl || liveHintEl !== hintEl) return;
+            const currentRon = fromCents(toCents(currentEur * rate));
+            const remainingRon = fromCents(toCents(remainingEur * rate));
+            liveHintEl.textContent = mode === 'remove'
+              ? `Poți scoate maxim ${money(currentRon)} RON. Obiectivul este în EURO, iar suma introdusă în LEI se transformă automat în euro la cursul zilei.`
+              : `Poți pune maxim ${money(remainingRon)} RON (aproximativ ${moneyWithCurrency(remainingEur, 'EUR')}). Tu scrii suma în LEI, iar aplicația o transformă automat în euro la cursul zilei.`;
+          }).catch(() => {
+            const liveHintEl = document.getElementById('moneyLimitHint');
+            if (!liveHintEl || liveHintEl !== hintEl) return;
+            liveHintEl.textContent = mode === 'remove'
+              ? `Poți scoate maxim ${moneyWithCurrency(currentEur, 'EUR')}. Tu scrii suma în LEI, iar aplicația o transformă automat în euro.`
+              : `Poți pune maxim ${moneyWithCurrency(remainingEur, 'EUR')}. Tu scrii suma în LEI, iar aplicația o transformă automat în euro.`;
+          });
+        }
       },
       async applyMoney(id, mode) {
         const amountRawRon = parseAmount(document.getElementById('moneyAmountInput')?.value || '');
@@ -2735,7 +2838,13 @@ function piggyPageHTML() {
         const remainingCents = Math.max(0, targetCents - oldCents);
 
         if (amountCents <= 0) return alert('Sumă invalidă.');
-        if (mode === 'remove' && amountCents > oldCents) return alert('Nu poți scoate mai mult decât există.');
+        if (mode === 'remove' && amountCents > oldCents) {
+          if (currency === 'EUR') {
+            const maxRon = fromCents(toCents(old * exchangeRate));
+            return alert(`Poți scoate maxim ${money(maxRon)} RON.`);
+          }
+          return alert('Nu poți scoate mai mult decât există.');
+        }
         if (mode !== 'remove' && amountCents > remainingCents) {
           const maxText = currency === 'EUR' ? `${moneyWithCurrency(fromCents(remainingCents), 'EUR')} / aproximativ ${money(fromCents(remainingCents) * exchangeRate)} RON` : `${money(fromCents(remainingCents))} RON`;
           return alert('Poți pune maxim ' + maxText + '. Ce este peste obiectiv nu se acceptă.');
