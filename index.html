@@ -796,6 +796,7 @@
       box-shadow:0 8px 18px rgba(15,23,42,.045);
     }
     .coin-btn:active { transform:scale(.98); }
+    .coin-btn.pressed { transform:scale(.94); background:rgba(250,204,21,.24); border-color:rgba(245,158,11,.35); box-shadow:0 12px 26px rgba(245,158,11,.16); }
     .coin-dot { width:18px; height:18px; border-radius:999px; background:linear-gradient(135deg,#f59e0b,#fde68a); border:1px solid rgba(146,64,14,.14); box-shadow:inset 0 1px 0 rgba(255,255,255,.65); }
     .milestone-row { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:6px; }
     .milestone-chip {
@@ -1296,9 +1297,9 @@
           <p class="text-xs muted mb-3">${escapeHTML(info.message)}</p>
           <div class="milestone-row mb-3">${milestones}</div>
           <div class="piggy-coin-grid">
-            <button class="coin-btn" onclick="window.appActions.addPiggyCoin(1, event)"><span class="coin-dot"></span>1 ban</button>
-            <button class="coin-btn" onclick="window.appActions.addPiggyCoin(10, event)"><span class="coin-dot"></span>10 bani</button>
-            <button class="coin-btn" onclick="window.appActions.addPiggyCoin(50, event)"><span class="coin-dot"></span>50 bani</button>
+            <button type="button" class="coin-btn" onclick="window.appActions.addPiggyCoin(1, event)"><span class="coin-dot"></span>1 ban</button>
+            <button type="button" class="coin-btn" onclick="window.appActions.addPiggyCoin(10, event)"><span class="coin-dot"></span>10 bani</button>
+            <button type="button" class="coin-btn" onclick="window.appActions.addPiggyCoin(50, event)"><span class="coin-dot"></span>50 bani</button>
           </div>
           <button class="piggy-break-btn" ${balance <= 0 ? 'disabled' : ''} onclick="window.appActions.breakPiggy()">${svg.pig} Sparge pușculița</button>
         </div>
@@ -1645,7 +1646,34 @@
       }
     }
 
-    function animatePiggyCoin() {}
+    function animatePiggyCoin(event, cents) {
+      try {
+        const btn = event?.currentTarget || event?.target?.closest?.('.coin-btn');
+        if (btn) {
+          btn.classList.add('pressed');
+          setTimeout(() => btn.classList.remove('pressed'), 190);
+        }
+
+        const startRect = btn?.getBoundingClientRect?.();
+        const targetEl = document.querySelector('.piggy-big-icon') || document.querySelector('.top-piggy .piggy-icon-box') || document.querySelector('.piggy-badge');
+        const targetRect = targetEl?.getBoundingClientRect?.();
+        if (!startRect || !targetRect) return;
+
+        const coin = document.createElement('div');
+        coin.className = 'piggy-flying-coin';
+        coin.textContent = cents === 1 ? '1b' : cents === 10 ? '10b' : '50b';
+        const startX = startRect.left + startRect.width / 2;
+        const startY = startRect.top + startRect.height / 2;
+        const targetX = targetRect.left + targetRect.width / 2;
+        const targetY = targetRect.top + targetRect.height / 2;
+        coin.style.left = startX + 'px';
+        coin.style.top = startY + 'px';
+        coin.style.setProperty('--coin-x', (targetX - startX) + 'px');
+        coin.style.setProperty('--coin-y', (targetY - startY) + 'px');
+        document.body.appendChild(coin);
+        setTimeout(() => coin.remove(), 820);
+      } catch (_) {}
+    }
 
     window.appActions = {
       toggleAuthMode: authHTML,
@@ -1891,6 +1919,10 @@
         const cents = raw >= 1 ? Math.round(raw) : toCents(raw);
         const value = fromCents(cents);
         if (!currentUser || !Number.isFinite(value) || cents <= 0) return;
+
+        const beforeBalance = piggyBalance();
+        const afterBalance = fromCents(toCents(beforeBalance) + cents);
+        const milestoneReached = PIGGY_MILESTONES.some(m => toCents(beforeBalance) < toCents(m.target) && toCents(afterBalance) >= toCents(m.target));
         animatePiggyCoin(event, cents);
 
         const localId = 'local-piggy-' + Date.now() + '-' + Math.random().toString(16).slice(2);
@@ -1910,6 +1942,7 @@
         transactions.unshift(localTransaction);
         suppressSoftUntil = Date.now() + 1200;
         renderApp(true);
+        if (milestoneReached) setTimeout(showConfetti, 120);
 
         piggySaveQueue = piggySaveQueue.catch(() => {}).then(async () => {
           const tr = await supabase.from('transactions').insert([{
