@@ -169,14 +169,35 @@
     .progress.done > span { background: linear-gradient(90deg, #16a34a, #86efac); }
 
     .badge {
-      font-size: 8px;
-      padding: 3px 6px;
+      font-size: 9px;
+      padding: 4px 7px;
       border-radius: 99px;
-      background: rgba(97,196,135,.16);
-      color: #9ef0bd;
-      border: 1px solid rgba(97,196,135,.25);
+      background: linear-gradient(135deg, #16a34a, #22c55e);
+      color: #ffffff;
+      border: 1px solid rgba(255,255,255,.50);
       letter-spacing: .05em;
       line-height: 1;
+      box-shadow: 0 8px 18px rgba(22,163,74,.25);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .done-message {
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      border-radius: 999px;
+      padding: 8px 11px;
+      font-size: 11px;
+      font-weight: 500;
+      color: #15803d;
+      background: rgba(22,163,74,.12);
+      border: 1px solid rgba(22,163,74,.20);
+      white-space: nowrap;
+    }
+    body.dark-mode .done-message {
+      color: #86efac;
+      background: rgba(22,163,74,.16);
+      border-color: rgba(134,239,172,.20);
     }
 
     .btn {
@@ -338,6 +359,8 @@
 
 
     .quick-actions { display:flex; align-items:center; gap:8px; }
+    .avatar-btn { padding:0; border:0; background:transparent; border-radius:999px; display:flex; align-items:center; justify-content:center; cursor:pointer; color:inherit; }
+    .avatar-btn:active { transform: scale(.96); }
     .summary-grid { display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap:10px; }
     .summary-tile {
       border-radius: 24px;
@@ -572,6 +595,7 @@
     let calcResult = '0';
     let swipeStartX = 0;
     let swipeMoved = false;
+    let completedHold = {};
     window.selectedSignupRole = 'sot';
 
     const app = document.getElementById('app');
@@ -602,6 +626,21 @@
     const roleLabel = (role) => role === 'sotie' ? 'Soție' : 'Soț';
     const ownerLabel = (email) => email === currentUser?.email ? 'Tu' : roleLabel(getRole(email));
     const partnerEmail = () => profiles.find(p => p.email && p.email !== currentUser?.email)?.email || goals.find(g => g.owner !== currentUser?.email)?.owner || null;
+    const isGoalDone = (goal) => Number(goal?.current || 0) >= Number(goal?.target || 1);
+    const showCompletedOnHome = (goal) => !isGoalDone(goal) || Number(completedHold[goal.id] || 0) > Date.now();
+
+    function markGoalCompleted(goal) {
+      if (!goal?.id) return;
+      completedHold[goal.id] = Date.now() + 5000;
+      showConfetti();
+      renderApp(true);
+      setTimeout(() => {
+        if (completedHold[goal.id] && completedHold[goal.id] <= Date.now()) {
+          delete completedHold[goal.id];
+          if (currentPage === 'home') renderApp(true);
+        }
+      }, 5200);
+    }
 
     function initTheme() {
       const saved = localStorage.getItem('appTheme') || 'light';
@@ -701,8 +740,8 @@
 
     function homeHTML() {
       const myRole = getRole(currentUser.email);
-      const myGoals = goals.filter(g => g.owner === currentUser.email);
-      const otherGoals = goals.filter(g => g.owner !== currentUser.email);
+      const myGoals = goals.filter(g => g.owner === currentUser.email && showCompletedOnHome(g));
+      const otherGoals = goals.filter(g => g.owner !== currentUser.email && showCompletedOnHome(g));
       const todayTransactions = transactions.filter(t => String(t.date).slice(0,10) === todayISO()).slice(0,3);
       const offered = transactions.filter(t => t.from_role === currentUser.email && t.to_role !== currentUser.email).reduce((s,t) => s + Math.max(0, Number(t.amount || 0)), 0);
       const received = transactions.filter(t => t.to_role === currentUser.email && t.from_role !== currentUser.email).reduce((s,t) => s + Math.max(0, Number(t.amount || 0)), 0);
@@ -716,7 +755,7 @@
           <div class="quick-actions">
             <button class="icon-btn" onclick="window.appActions.openCalendar()" aria-label="Calendar">${svg.calendar}</button>
             <button class="icon-btn" onclick="window.appActions.openCalculator()" aria-label="Calculator">${svg.calc}</button>
-            ${avatarHTML(currentUser.email)}
+            <button class="avatar-btn" onclick="window.appActions.switchPage('profile')" aria-label="Profil">${avatarHTML(currentUser.email)}</button>
           </div>
         </div>
 
@@ -780,7 +819,7 @@
           <div class="flex items-center justify-between mt-3 gap-3">
             <span class="text-xs muted shrink-0">${percent}%</span>
             <div class="flex gap-2 flex-wrap justify-end">
-              ${isMine ? `<button class="btn btn-gold" onclick="event.stopPropagation(); window.appActions.openMoney('${goal.id}','add')">Pune</button><button class="btn btn-soft" onclick="event.stopPropagation(); window.appActions.openMoney('${goal.id}','remove')">Scoate</button>` : (!done ? `<button class="btn btn-gold" onclick="event.stopPropagation(); window.appActions.openMoney('${goal.id}','gift')">Oferă</button>` : '')}
+              ${done ? `<span class="done-message">Obiectiv finalizat</span>` : (isMine ? `<button class="btn btn-gold" onclick="event.stopPropagation(); window.appActions.openMoney('${goal.id}','add')">Pune</button><button class="btn btn-soft" onclick="event.stopPropagation(); window.appActions.openMoney('${goal.id}','remove')">Scoate</button>` : `<button class="btn btn-gold" onclick="event.stopPropagation(); window.appActions.openMoney('${goal.id}','gift')">Oferă</button>`)}
             </div>
           </div>
         </div>`;
@@ -1043,6 +1082,7 @@
       },
       openMoney(id, mode) {
         const g = goals.find(x => x.id === id); if (!g) return;
+        if (isGoalDone(g)) return alert('Obiectiv finalizat. Nu mai poți modifica suma.');
         const title = mode === 'remove' ? 'Scoate bani' : mode === 'gift' ? 'Oferă bani' : 'Pune bani';
         const action = mode === 'remove' ? 'Scoate' : mode === 'gift' ? 'Oferă' : 'Pune';
         modal.innerHTML = `<div class="modal-backdrop"><div class="sheet"><div class="grab"></div><h3 class="text-xl font-medium mb-1">${title}</h3><p class="text-sm muted mb-4">${escapeHTML(String(g.title || '').toUpperCase())}</p><div class="space-y-3"><input id="moneyAmountInput" type="number" class="input" placeholder="RON"><div class="grid grid-cols-2 gap-2 pt-2"><button class="btn btn-soft btn-full" onclick="window.appActions.closeModal()">Anulează</button><button id="moneyBtn" class="btn btn-gold btn-full" onclick="window.appActions.applyMoney('${id}','${mode}')">${action}</button></div></div></div></div>`;
@@ -1051,21 +1091,26 @@
         const amountRaw = parseFloat(document.getElementById('moneyAmountInput')?.value || '');
         const g = goals.find(x => x.id === id);
         if (!g || !amountRaw || amountRaw <= 0) return alert('Sumă invalidă.');
+        if (isGoalDone(g)) return alert('Obiectiv finalizat. Nu mai poți modifica suma.');
         if (mode === 'remove' && g.owner !== currentUser.email) return alert('Poți scoate doar din obiectivul tău.');
         if (mode === 'remove' && amountRaw > Number(g.current || 0)) return alert('Nu poți scoate mai mult decât există.');
 
         const old = Number(g.current || 0);
-        const delta = mode === 'remove' ? -amountRaw : amountRaw;
-        const optimistic = Math.max(0, old + delta);
+        const target = Number(g.target || 0);
+        const requestedDelta = mode === 'remove' ? -amountRaw : amountRaw;
+        const optimistic = mode === 'remove' ? Math.max(0, old + requestedDelta) : Math.min(target, old + requestedDelta);
+        const optimisticDelta = optimistic - old;
+        if (optimisticDelta === 0) return alert('Obiectiv finalizat. Nu mai poți adăuga bani aici.');
+
         const btn = document.getElementById('moneyBtn');
-        if (btn) { btn.textContent = 'Gata...'; btn.disabled = true; }
+        if (btn) { btn.textContent = 'Se salvează...'; btn.disabled = true; }
 
         g.current = optimistic;
         const localTransaction = {
           id: 'local-' + Date.now(),
           goal_id: id,
           goal_title: String(g.title || '').toUpperCase(),
-          amount: delta,
+          amount: optimisticDelta,
           from_role: currentUser.email,
           to_role: g.owner,
           date: todayISO(),
@@ -1073,23 +1118,31 @@
         };
         transactions.unshift(localTransaction);
         this.closeModal();
-        renderApp();
-        if (old < Number(g.target || 0) && optimistic >= Number(g.target || 0)) showConfetti();
+        renderApp(true);
 
         try {
-          const rpc = await supabase.rpc('adjust_goal_amount', { p_goal_id: id, p_delta: delta });
+          const rpc = await supabase.rpc('adjust_goal_amount', { p_goal_id: id, p_delta: requestedDelta });
           let finalAmount = optimistic;
           if (rpc.error) {
-            const upd = await supabase.from('goals').update({ current: optimistic }).eq('id', id).select('current').maybeSingle();
+            const msg = String(rpc.error.message || rpc.error.details || rpc.error.hint || '');
+            const missingRpc = rpc.error.code === 'PGRST202' || msg.toLowerCase().includes('could not find') || msg.toLowerCase().includes('function');
+            if (!missingRpc) throw rpc.error;
+            const fallbackAmount = mode === 'remove' ? Math.max(0, old + requestedDelta) : Math.min(target, old + requestedDelta);
+            const upd = await supabase.from('goals').update({ current: fallbackAmount }).eq('id', id).select('current').maybeSingle();
             if (upd.error) throw upd.error;
             if (upd.data?.current !== undefined) finalAmount = Number(upd.data.current);
           } else if (rpc.data !== null && rpc.data !== undefined) finalAmount = Number(rpc.data);
 
-          const tr = await supabase.from('transactions').insert([{ goal_id:id, goal_title:String(g.title || '').toUpperCase(), amount:delta, from_role:currentUser.email, to_role:g.owner, date:todayISO(), timestamp:new Date().toISOString() }]).select('*').maybeSingle();
-          if (tr.error) throw tr.error;
+          const actualDelta = finalAmount - old;
+          if (actualDelta === 0) throw new Error('Obiectiv finalizat. Nu mai poți modifica suma.');
+
           g.current = finalAmount;
+          localTransaction.amount = actualDelta;
+          const tr = await supabase.from('transactions').insert([{ goal_id:id, goal_title:String(g.title || '').toUpperCase(), amount:actualDelta, from_role:currentUser.email, to_role:g.owner, date:todayISO(), timestamp:new Date().toISOString() }]).select('*').maybeSingle();
+          if (tr.error) throw tr.error;
           if (tr.data) transactions = transactions.map(t => t.id === localTransaction.id ? tr.data : t);
           renderApp(true);
+          if (old < target && finalAmount >= target) markGoalCompleted(g);
           scheduleSoftRefresh();
         } catch (error) {
           g.current = old;
