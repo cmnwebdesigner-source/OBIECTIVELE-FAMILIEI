@@ -460,69 +460,31 @@
       display:flex;
       align-items:center;
       justify-content:center;
-      padding:24px;
-      color: #0f172a;
-      background:
-        radial-gradient(circle at 20% 18%, rgba(250,204,21,.20), transparent 32%),
-        radial-gradient(circle at 85% 78%, rgba(59,130,246,.14), transparent 34%),
-        linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
-    }
-    .loading-wrap {
-      width:min(92vw, 380px);
-      display:flex;
-      flex-direction:column;
-      align-items:center;
-      gap:14px;
-      padding:30px 24px;
-      border-radius:32px;
-      background:rgba(255,255,255,.72);
-      border:1px solid rgba(255,255,255,.80);
-      box-shadow:0 26px 80px rgba(15,23,42,.16), inset 0 1px 0 rgba(255,255,255,.95);
-      backdrop-filter: blur(18px);
-      text-align:center;
-    }
-    .loading-title {
-      max-width:280px;
-      color:#0f172a;
-      font-size:13px;
-      line-height:1.55;
-      font-weight:800;
-      letter-spacing:.12em;
+      color: #2563eb;
+      font-size: 13px;
+      letter-spacing: .08em;
       text-transform: uppercase;
     }
-    .loading-sub { color:#64748b; font-size:12px; }
+    .loading-wrap { display:flex; flex-direction:column; align-items:center; gap:14px; }
     .loading-mark {
-      width: 62px;
-      height: 62px;
-      border-radius: 24px;
-      background: linear-gradient(145deg, rgba(255,255,255,.95), rgba(250,204,21,.22));
-      border: 1px solid rgba(250,204,21,.26);
+      width: 46px;
+      height: 46px;
+      border-radius: 18px;
+      background: linear-gradient(135deg, rgba(37,99,235,.16), rgba(255,255,255,.92));
+      border: 1px solid rgba(37,99,235,.16);
       position:relative;
-      box-shadow: 0 20px 48px rgba(234,179,8,.20), inset 0 1px 0 rgba(255,255,255,.95);
-      overflow:hidden;
-    }
-    .loading-mark::before {
-      content:'❤';
-      position:absolute;
-      inset:0;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      font-size:24px;
-      color:#d97706;
-      animation: pulseGold 1.15s ease-in-out infinite;
+      box-shadow: 0 18px 45px rgba(0,0,0,.28);
     }
     .loading-mark::after {
       content:'';
       position:absolute;
-      left:-45%; top:-45%;
-      width:70%; height:190%;
-      background:linear-gradient(90deg, transparent, rgba(255,255,255,.85), transparent);
-      transform:rotate(25deg);
-      animation: loadingShine 1.9s ease-in-out infinite;
+      inset: 14px;
+      border-radius: 999px;
+      background: #2563eb;
+      box-shadow: 0 0 24px rgba(37,99,235,.28);
+      animation: pulseGold 1.2s ease-in-out infinite;
     }
-    @keyframes pulseGold { 0%,100% { transform:scale(.86); opacity:.72; } 50% { transform:scale(1); opacity:1; } }
-    @keyframes loadingShine { 0% { left:-80%; } 55%,100% { left:125%; } }
+    @keyframes pulseGold { 0%,100% { transform:scale(.72); opacity:.55; } 50% { transform:scale(1); opacity:1; } }
   
 
     /* FIX FINAL: tema reală, carduri rezumat premium, calendar normal */
@@ -807,11 +769,11 @@
       color:#0f172a;
       background:linear-gradient(145deg, rgba(255,255,255,.98), rgba(226,232,240,.92));
       border:1px solid rgba(15,23,42,.08);
-      box-shadow:0 12px 24px rgba(15,23,42,.08), inset 0 1px 0 rgba(255,255,255,.92);
+      box-shadow:none;
       flex-shrink:0;
-      transition:transform .14s ease, box-shadow .14s ease;
+      transition:transform .14s ease;
     }
-    .top-game-btn:active { transform:scale(.94); box-shadow:0 8px 18px rgba(15,23,42,.10); }
+    .top-game-btn:active { transform:scale(.94); box-shadow:none; }
     .games-card {
       border-radius:30px;
       padding:22px;
@@ -845,7 +807,7 @@
       color:#0f172a;
       background:linear-gradient(145deg, rgba(255,255,255,.98), rgba(226,232,240,.92));
       border:1px solid rgba(15,23,42,.08);
-      box-shadow:0 12px 24px rgba(15,23,42,.08), inset 0 1px 0 rgba(255,255,255,.92);
+      box-shadow:none;
       flex-shrink:0;
     }
     .piggy-head-label { font-size:11px; color:var(--muted); line-height:1; }
@@ -942,11 +904,8 @@
     .piggy-target-note { font-size:12px; color:var(--muted); margin-top:6px; line-height:1.35; }
     .piggy-progress-big { height:12px; border-radius:999px; background:rgba(15,23,42,.07); overflow:hidden; margin:16px 0 12px; }
     .piggy-progress-big span { display:block; height:100%; border-radius:inherit; background:linear-gradient(90deg,#2563eb,#22c55e,#eab308); transition:width .22s ease; }
-    .piggy-coin-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; margin-top:14px; }
+    .piggy-coin-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; margin-top:14px; }
     .piggy-coin-grid .coin-btn { min-height:58px; border-radius:20px; flex-direction:column; gap:5px; font-size:12px; }
-    .top-piggy .piggy-icon-box, .top-game-btn { box-shadow:none !important; }
-    .top-piggy, .top-game-btn { box-shadow:none !important; }
-
     .piggy-break-btn { margin-top:12px; width:100%; border-radius:20px; min-height:52px; display:flex; align-items:center; justify-content:center; gap:8px; font-weight:500; color:#fff; background:linear-gradient(135deg,#ef4444,#f97316); box-shadow:0 14px 28px rgba(239,68,68,.22); }
     .piggy-break-btn:disabled { opacity:.45; filter:grayscale(1); box-shadow:none; }
     .piggy-history-row { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px; border-radius:18px; background:var(--card); border:1px solid rgba(15,23,42,.07); }
@@ -976,14 +935,6 @@
       --coin-x: 0px;
       --coin-y: -120px;
     }
-
-    .piggy-flying-coin.plain-coin {
-      background: radial-gradient(circle at 34% 26%, #fff7c2 0 13%, #fde047 28%, #f59e0b 70%, #b45309 100%);
-      color: transparent;
-      font-size:0;
-      border:1px solid rgba(146,64,14,.16);
-    }
-
     @keyframes piggyCoinFly {
       0% { opacity: 0; transform: translate(-50%, -50%) scale(.65) rotate(-18deg); }
       14% { opacity: 1; transform: translate(-50%, -50%) scale(1.05) rotate(8deg); }
@@ -996,7 +947,7 @@
     body.dark-mode .coin-btn {
       background:rgba(15,23,42,.86);
       border-color:rgba(255,255,255,.10);
-      box-shadow:0 16px 38px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.04);
+      box-shadow:none;
       color:var(--text);
     }
     body.dark-mode .piggy-progress-line, body.dark-mode .piggy-progress-big { background:rgba(255,255,255,.08); }
@@ -1136,76 +1087,10 @@
     .piggy-mini-day.has { color:var(--text); background:rgba(34,197,94,.10); border-color:rgba(34,197,94,.20); }
     .piggy-mini-day.has::after { content:''; position:absolute; bottom:4px; width:4px; height:4px; border-radius:999px; background:#16a34a; }
 
-    /* Puncte / recompense */
-    .top-points-pill {
-      min-width:64px;
-      height:46px;
-      padding:0 10px;
-      border-radius:18px;
-      display:flex;
-      flex-direction:column;
-      align-items:center;
-      justify-content:center;
-      gap:1px;
-      color:#0f172a;
-      background:linear-gradient(145deg, rgba(255,255,255,.98), rgba(254,243,199,.92));
-      border:1px solid rgba(217,119,6,.16);
-      box-shadow:0 10px 22px rgba(217,119,6,.10), inset 0 1px 0 rgba(255,255,255,.95);
-      flex:0 0 auto;
-      transition:transform .14s ease;
-    }
-    .top-points-pill:active { transform:scale(.95); }
-    .top-points-pill b { font-size:13px; line-height:1; }
-    .top-points-pill span { font-size:9px; color:#92400e; line-height:1; text-transform:uppercase; letter-spacing:.06em; }
-    body.dark-mode .top-points-pill { color:#f8fafc; background:linear-gradient(145deg, rgba(30,41,59,.95), rgba(120,53,15,.36)); border-color:rgba(251,191,36,.20); }
-    body.dark-mode .top-points-pill span { color:#fde68a; }
-    .points-card {
-      border-radius:28px;
-      padding:18px;
-      background:linear-gradient(145deg, rgba(255,255,255,.94), rgba(254,243,199,.70));
-      border:1px solid rgba(217,119,6,.14);
-      box-shadow:0 18px 45px rgba(217,119,6,.10), inset 0 1px 0 rgba(255,255,255,.95);
-    }
-    body.dark-mode .points-card { background:linear-gradient(145deg, rgba(15,23,42,.92), rgba(120,53,15,.28)); border-color:rgba(251,191,36,.16); }
-    .points-big { font-size:34px; line-height:1; font-weight:800; letter-spacing:-.04em; color:#d97706; }
-    .points-progress {
-      height:9px;
-      border-radius:999px;
-      background:rgba(217,119,6,.13);
-      overflow:hidden;
-      margin-top:12px;
-    }
-    .points-progress span { display:block; height:100%; border-radius:inherit; width:0; background:linear-gradient(90deg, #f59e0b, #facc15); }
-    .task-points-badge {
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
-      min-width:38px;
-      padding:5px 8px;
-      border-radius:999px;
-      background:rgba(245,158,11,.12);
-      color:#b45309;
-      font-size:11px;
-      font-weight:700;
-      white-space:nowrap;
-    }
-    body.dark-mode .task-points-badge { color:#fde68a; background:rgba(245,158,11,.18); }
-    .reward-modal-list { max-height:240px; overflow:auto; display:flex; flex-direction:column; gap:8px; }
-    .reward-goal-option {
-      width:100%;
-      text-align:left;
-      padding:12px;
-      border-radius:18px;
-      border:1px solid rgba(15,23,42,.08);
-      background:rgba(255,255,255,.74);
-    }
-    body.dark-mode .reward-goal-option { background:rgba(255,255,255,.06); border-color:rgba(255,255,255,.10); }
-
-
   </style>
 </head>
 <body>
-  <div id="app" class="app-shell"><div class="loading"><div class="loading-wrap"><div class="loading-mark"></div><div class="loading-title">OBIECTIVELE FAMILIEI COMAN SE INCARCA</div><div class="loading-sub">Pregătim obiectivele voastre...</div></div></div></div>
+  <div id="app" class="app-shell"><div class="loading"><div class="loading-wrap"><div class="loading-mark"></div><span>Se încarcă</span></div></div></div>
   <div id="modalContainer"></div>
   <div id="confettiRoot"></div>
 
@@ -1230,7 +1115,6 @@
     let suppressSoftUntil = 0;
     let calcExpression = '';
     let calcResult = '0';
-    let calcDraftNote = '';
     let swipeStartX = 0;
     let swipeMoved = false;
     let completedHold = {};
@@ -1240,6 +1124,7 @@
     let familyCode = '';
     let familyCodeStatus = '';
     let piggySaveQueue = Promise.resolve();
+    let calcNoteDraft = '';
     let selectedGoalListKind = '';
     let selectedGoalListEmail = '';
     let selectedPartnerProfileEmail = '';
@@ -1247,8 +1132,6 @@
     let selectedMoneyHistoryMonth = '';
     let selectedTaskHistoryMonth = '';
     let selectedPiggyHistoryMonth = '';
-    const POINT_REWARD_THRESHOLD = 100;
-    const POINT_REWARD_AMOUNT = 100;
     let taskToastTimer = null;
     let gameRooms = [];
     let gameWallets = [];
@@ -1619,7 +1502,6 @@
               <div class="piggy-icon-box">${svg.pig}</div>
             </button>
             <button class="top-game-btn" onclick="window.appActions.openTasks()" aria-label="Task-uri zilnice">${svg.tasks}</button>
-            ${pointsMiniHTML()}
           </div>
           <div class="quick-actions">
             <button class="icon-btn" onclick="window.appActions.openCalendar()" aria-label="Calendar">${svg.calendar}</button>
@@ -1733,7 +1615,6 @@ function piggyPageHTML() {
       const info = piggyInfo(balance);
       const history = piggyHistoryTransactions().slice().sort((a,b) => new Date(b.timestamp || b.created_at || 0) - new Date(a.timestamp || a.created_at || 0));
       const breakHistory = history.filter(t => Number(t.amount || 0) < 0);
-      const coinHistory = history.filter(t => Number(t.amount || 0) > 0);
       const milestones = PIGGY_MILESTONES.map(m => {
         const cls = balance >= m.target ? 'done' : (m.target === info.nextTarget ? 'next' : '');
         return `<span class="milestone-chip ${cls}">${m.target} lei</span>`;
@@ -1997,7 +1878,7 @@ function piggyPageHTML() {
         <div class="top-card mb-4"><p class="muted text-xs">Calculator</p><div class="text-[30px] min-h-[38px] font-medium break-all">${calcResult}</div><p class="muted text-sm break-all">${calcExpression || '0'}</p></div>
         <div class="calc-grid mb-4">${keys.map(k => `<button class="calc-key ${['÷','×','-','+'].includes(k) ? 'op' : k==='C' ? 'clear' : ''}" onclick="window.appActions.calcPress('${k}')">${k}</button>`).join('')}</div>
         <div class="grid grid-cols-2 gap-2 mb-4"><button class="btn btn-soft btn-full" onclick="window.appActions.calcBack()">Șterge</button><button class="btn btn-gold btn-full" onclick="window.appActions.calcEquals()">=</button></div>
-        <div class="card calc-save-card mb-4"><p class="label">Notiță scurtă</p><textarea id="calcNoteInput" class="input" rows="1" placeholder="Ex. cumpărături, datorie, obiectiv..." oninput="window.appActions.updateCalcDraftNote(this.value)">${escapeHTML(calcDraftNote)}</textarea><button id="saveCalcBtn" class="btn btn-gold btn-full mt-2" onclick="window.appActions.saveCalc()">Salvează Calcul</button></div>
+        <div class="card calc-save-card mb-4"><p class="label">Notiță scurtă</p><textarea id="calcNoteInput" class="input" rows="1" placeholder="Ex. cumpărături, datorie, obiectiv..." oninput="window.appActions.updateCalcNote(this.value)">${escapeHTML(calcNoteDraft)}</textarea><button id="saveCalcBtn" class="btn btn-gold btn-full mt-2" onclick="window.appActions.saveCalc()">Salvează Calcul</button></div>
         <div class="section"><div class="section-head"><span>Calcule salvate</span>${calculatorHistory.length ? `<button class="clear-history-btn" onclick="window.appActions.clearCalculatorHistory()">Șterge istoric</button>` : `<small>0</small>`}</div><div id="calculatorHistoryList" class="space-y-2">${calculatorHistory.length ? calculatorHistory.map(c => `<div class="card"><p class="text-sm">${escapeHTML(c.expression)} = ${escapeHTML(c.result)}</p>${c.note ? `<p class="calc-note-inline"><b>Notiță:</b> ${escapeHTML(c.note)}</p>` : ''}</div>`).join('') : emptyHTML('Nu ai calcule salvate.')}</div></div>`;
     }
 
@@ -2047,9 +1928,8 @@ function piggyPageHTML() {
       const dateText = dt.toLocaleDateString('ro-RO', { day:'2-digit', month:'short', year:'numeric' });
       const timeText = dt.toLocaleTimeString('ro-RO', { hour:'2-digit', minute:'2-digit' });
       const fromGame = String(t.source || '').toLowerCase() === 'game_withdrawal' || String(t.note || '').toLowerCase().includes('joc');
-      const fromReward = isPointRewardTransaction(t);
       const person = type === 'offered' ? ownerLabel(t.to_role) : ownerLabel(t.from_role);
-      const label = fromReward ? (type === 'offered' ? 'Recompensă puncte către' : 'Recompensă puncte de la') : (fromGame ? (type === 'offered' ? 'Adăugat din joc către' : 'Adăugat din joc de la') : (type === 'offered' ? 'Către' : 'De la'));
+      const label = fromGame ? (type === 'offered' ? 'Adăugat din joc către' : 'Adăugat din joc de la') : (type === 'offered' ? 'Către' : 'De la');
       return `<div class="card" style="padding:12px 13px">
         <div class="flex items-start justify-between gap-3">
           <div class="min-w-0">
@@ -2087,208 +1967,98 @@ function piggyPageHTML() {
       </div>`;
     }
 
-    function isPointRewardTransaction(t) {
-      const source = String(t?.source || '').toLowerCase();
-      const note = String(t?.note || '').toLowerCase();
-      return source === 'points_reward' || note.includes('recompensă puncte') || note.includes('recompensa puncte');
-    }
-
-    function taskTransactionDate(t) {
-      return String(t?.date || t?.timestamp || '').slice(0,10);
-    }
-
-    function taskMoneyTransactions() {
-      return transactions
-        .filter(t => transactionBelongsToFamily(t))
-        .filter(t => !isPiggyTransaction(t))
-        .filter(t => !isPointRewardTransaction(t))
-        .filter(t => Number(t.amount || 0) > 0);
-    }
-
-    function hasOwnAvatar(email = currentUser?.email) {
-      return !!getProfile(email)?.avatar;
-    }
-
-    function hasOwnGoal(email = currentUser?.email) {
-      return goals.some(g => goalBelongsToFamily(g) && g.owner === email);
-    }
-
-    function hasGiftedPartner(email = currentUser?.email) {
-      return taskMoneyTransactions().some(t => t.from_role === email && t.to_role !== email);
-    }
-
-    function startingTasksForUser(email = currentUser?.email) {
-      const partnerText = getRole(email) === 'sot' ? 'soției' : 'soțului';
-      return [
-        { id:'start_avatar', type:'start', done: hasOwnAvatar(email), title:'Adaugă poza de profil', text:'Pune o poză pe profilul tău.', icon: svg.camera, points:30 },
-        { id:'start_goal', type:'start', done: hasOwnGoal(email), title:'Adaugă primul tău obiectiv', text:'Creează primul obiectiv în aplicație.', icon: svg.plus, points:30 },
-        { id:'start_gift', type:'start', done: hasGiftedPartner(email), title:'Dăruiește partenerului tău', text:`Oferă bani la un obiectiv al ${partnerText}.`, icon: svg.home, points:30 }
-      ];
-    }
-
-    function dailyTasksForDate(dateStr, email = currentUser?.email) {
+    function dailyTasksForDate(dateStr) {
       const day = String(dateStr || todayISO()).slice(0,10);
-      const progressToday = taskMoneyTransactions().some(t => taskTransactionDate(t) === day && t.from_role === email && !!t.goal_id);
-      const offeredToday = taskMoneyTransactions().some(t => taskTransactionDate(t) === day && t.from_role === email && t.to_role !== email);
-      const piggyToday = transactions.some(t => transactionBelongsToFamily(t) && isPiggyTransaction(t) && Number(t.amount || 0) > 0 && taskTransactionDate(t) === day && t.from_role === email);
-      const partnerText = getRole(email) === 'sot' ? 'soției' : 'soțului';
+      const createdGoalToday = goals.some(g => goalBelongsToFamily(g) && g.owner === currentUser?.email && String(g.created_at || '').slice(0,10) === day);
+      const offeredToday = visibleTransactions().some(t => transactionBelongsToFamily(t) && !isPiggyTransaction(t) && Number(t.amount || 0) > 0 && String(t.date || t.timestamp || '').slice(0,10) === day && t.from_role === currentUser?.email && t.to_role !== currentUser?.email);
+      const piggyToday = visibleTransactions().some(t => transactionBelongsToFamily(t) && isPiggyTransaction(t) && Number(t.amount || 0) > 0 && String(t.date || t.timestamp || '').slice(0,10) === day);
+      const partnerText = getRole(currentUser?.email) === 'sot' ? 'soției' : 'soțului';
       return [
-        { id:'daily_progress', type:'daily', day, done: progressToday, title:'Adaugă progres la un obiectiv', text:'Pune orice sumă la un obiectiv activ.', icon: svg.plus, points:2 },
-        { id:'daily_offer', type:'daily', day, done: offeredToday, title:'Oferă partenerului', text:`Pune bani azi la un obiectiv al ${partnerText}.`, icon: svg.home, points:3 },
-        { id:'daily_piggy', type:'daily', day, done: piggyToday, title:'Pușculița zilei', text:'Adaugă o monedă în pușculița voastră.', icon: svg.pig, points:1 }
+        { id:'goal', done: createdGoalToday, title:'Adaugă un obiectiv', text:'Creează azi un obiectiv personal sau comun.', icon: svg.plus },
+        { id:'offer', done: offeredToday, title:'Oferă partenerului', text:`Pune bani azi la un obiectiv al ${partnerText}.`, icon: svg.home },
+        { id:'piggy', done: piggyToday, title:'Pușculița zilei', text:'Adaugă o monedă în pușculița voastră.', icon: svg.pig }
       ];
     }
 
-    function dailyTasksForToday() { return dailyTasksForDate(todayISO(), currentUser?.email); }
-
-    function allTaskDefinitionsForToday() {
-      return [...startingTasksForUser(currentUser?.email), ...dailyTasksForToday()];
-    }
+    function dailyTasksForToday() { return dailyTasksForDate(todayISO()); }
 
     function taskNotifyStorageKey(dateStr, id) {
       return `task_done_notice:${familyCode || DEFAULT_FAMILY_CODE}:${currentUser?.email || 'user'}:${dateStr}:${id}`;
     }
 
-    function taskKeyForItem(item) {
-      return item.type === 'start' ? 'start' : (item.day || todayISO());
-    }
-
     function seedTaskNotificationsForToday() {
-      allTaskDefinitionsForToday().filter(t => t.done).forEach(t => localStorage.setItem(taskNotifyStorageKey(taskKeyForItem(t), t.id), '1'));
+      const day = todayISO();
+      dailyTasksForToday().filter(t => t.done).forEach(t => localStorage.setItem(taskNotifyStorageKey(day, t.id), '1'));
     }
 
     function taskCheckIcon() {
       return '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4 4L19 6.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
     }
 
-    function showTaskToast(title, points = 0) {
+    function showTaskToast(title) {
       document.getElementById('taskToast')?.remove();
       clearTimeout(taskToastTimer);
       const el = document.createElement('div');
       el.id = 'taskToast';
       el.className = 'task-toast';
-      el.innerHTML = `<div class="task-toast-inner"><div class="task-toast-icon">${taskCheckIcon()}</div><div><p class="task-toast-title">Felicitări, ai finalizat taskul</p><p class="task-toast-text">${escapeHTML(title)}${points ? ` · +${points} puncte` : ''}</p></div></div>`;
+      el.innerHTML = `<div class="task-toast-inner"><div class="task-toast-icon">${taskCheckIcon()}</div><div><p class="task-toast-title">Felicitări, ai finalizat taskul</p><p class="task-toast-text">${escapeHTML(title)}</p></div></div>`;
       document.body.appendChild(el);
       requestAnimationFrame(() => el.classList.add('show'));
       taskToastTimer = setTimeout(() => {
         el.classList.remove('show');
         setTimeout(() => el.remove(), 260);
-      }, 3000);
-    }
-
-    function pointRewardClaimsForUser(email = currentUser?.email) {
-      return transactions
-        .filter(t => transactionBelongsToFamily(t))
-        .filter(t => isPointRewardTransaction(t))
-        .filter(t => t.to_role === email)
-        .filter(t => Number(t.amount || 0) > 0)
-        .sort((a,b) => String(b.timestamp || '').localeCompare(String(a.timestamp || '')));
-    }
-
-    function pointActionItems(email = currentUser?.email) {
-      const out = [];
-      startingTasksForUser(email).filter(t => t.done).forEach(t => out.push({ ...t, day:'start' }));
-      const days = new Set([todayISO()]);
-      transactions.filter(t => transactionBelongsToFamily(t)).forEach(t => {
-        const d = taskTransactionDate(t);
-        if (d) days.add(d);
-      });
-      goals.filter(g => goalBelongsToFamily(g) && g.owner === email).forEach(g => {
-        const d = String(g.created_at || '').slice(0,10);
-        if (d) days.add(d);
-      });
-      Array.from(days).sort().forEach(day => {
-        dailyTasksForDate(day, email).filter(t => t.done).forEach(t => out.push({ ...t, day }));
-      });
-      return out;
-    }
-
-    function pointSummary(email = currentUser?.email) {
-      const actions = pointActionItems(email);
-      const earned = actions.reduce((s,t) => s + Number(t.points || 0), 0);
-      const claims = pointRewardClaimsForUser(email).length;
-      const current = Math.max(0, earned - claims * POINT_REWARD_THRESHOLD);
-      return {
-        actions,
-        earned,
-        claims,
-        current,
-        threshold: POINT_REWARD_THRESHOLD,
-        rewardAmount: POINT_REWARD_AMOUNT,
-        available: current >= POINT_REWARD_THRESHOLD,
-        percent: Math.min(100, Math.round((current / POINT_REWARD_THRESHOLD) * 100))
-      };
-    }
-
-    function pointsMiniHTML() {
-      const s = pointSummary();
-      return `<button class="top-points-pill" onclick="window.appActions.openPointsInfo()" aria-label="Puncte"><b>${Math.min(s.current, POINT_REWARD_THRESHOLD)}/${POINT_REWARD_THRESHOLD}</b><span>puncte</span></button>`;
-    }
-
-    function pointsCardHTML() {
-      const s = pointSummary();
-      return `<div class="points-card mb-4">
-        <div class="flex items-start justify-between gap-3">
-          <div>
-            <p class="muted text-xs">Punctele tale</p>
-            <div class="points-big">${Math.min(s.current, POINT_REWARD_THRESHOLD)}</div>
-          </div>
-          <button class="btn ${s.available ? 'btn-gold' : 'btn-soft'}" onclick="window.appActions.openPointsInfo()">${s.available ? 'Revendică' : 'Detalii'}</button>
-        </div>
-        <div class="points-progress"><span style="width:${s.percent}%"></span></div>
-        <p class="text-xs muted mt-2">La ${POINT_REWARD_THRESHOLD} puncte alegi un obiectiv și primești automat ${POINT_REWARD_AMOUNT} RON din partea partenerului.</p>
-      </div>`;
-    }
-
-    function pointRewardSeenKey() {
-      const s = pointSummary();
-      return `points_reward_seen:${familyCode || DEFAULT_FAMILY_CODE}:${currentUser?.email || 'user'}:${s.claims}:${Math.floor(s.current / POINT_REWARD_THRESHOLD)}`;
-    }
-
-    function maybeShowPointRewardModal() {
-      if (!currentUser || modal.innerHTML.trim()) return;
-      const s = pointSummary();
-      if (!s.available) return;
-      const key = pointRewardSeenKey();
-      if (localStorage.getItem(key)) return;
-      localStorage.setItem(key, '1');
-      setTimeout(() => window.appActions.openPointsInfo(true), 220);
+      }, 2800);
     }
 
     function checkNewTaskCompletions() {
       if (!currentUser || !dataLoadedOnce) return;
-      let hasNew = false;
-      allTaskDefinitionsForToday().filter(t => t.done).forEach(t => {
-        const key = taskNotifyStorageKey(taskKeyForItem(t), t.id);
+      const day = todayISO();
+      dailyTasksForToday().filter(t => t.done).forEach(t => {
+        const key = taskNotifyStorageKey(day, t.id);
         if (!localStorage.getItem(key)) {
           localStorage.setItem(key, '1');
-          hasNew = true;
-          showTaskToast(t.title, t.points);
+          if (currentPage !== 'tasks') showTaskToast(t.title);
           setTimeout(showConfetti, 80);
         }
       });
-      if (hasNew) {
-        renderApp(true);
-        setTimeout(maybeShowPointRewardModal, 420);
-      }
     }
 
-    function taskItemCard(item) {
-      return `<button class="card task-action-card" onclick="window.appActions.openTaskAction('${item.id}')" style="width:100%; padding:13px 14px; display:flex; align-items:center; gap:12px; text-align:left;">
-        <div class="icon-btn" style="flex:0 0 auto; ${item.done ? 'background:rgba(34,197,94,.13); color:#16a34a;' : ''}">${item.done ? taskCheckIcon() : item.icon}</div>
-        <div class="min-w-0 flex-1">
-          <p class="text-sm" style="color:var(--text)">${escapeHTML(item.title)}</p>
-          <p class="text-xs muted mt-1">${escapeHTML(item.text)}</p>
+    function monthDays(dateStr) {
+      const base = new Date((dateStr || todayISO()) + 'T12:00:00');
+      const y = base.getFullYear();
+      const m = base.getMonth();
+      const count = new Date(y, m + 1, 0).getDate();
+      const today = todayISO();
+      const out = [];
+      for (let d = 1; d <= count; d++) {
+        const iso = new Date(y, m, d, 12).toISOString().split('T')[0];
+        if (iso <= today) out.push(iso);
+      }
+      return out.reverse();
+    }
+
+    function taskMonthHistoryHTML() {
+      const month = selectedTaskHistoryMonth || firstOfMonth(todayISO());
+      const days = monthDays(month);
+      return `<div class="section">
+        <div class="section-head"><span>Istoric task-uri</span><small class="capitalize">${formatMonthTitle(month)}</small></div>
+        <div class="task-history-month mb-3">
+          <button class="money-month-nav" onclick="window.appActions.shiftTaskHistoryMonth(-1)">${svg.back}</button>
+          <div class="text-center min-w-0"><p class="text-sm capitalize" style="color:var(--text)">${formatMonthTitle(month)}</p><p class="text-[11px] muted">finalizate și nefinalizate</p></div>
+          <button class="money-month-nav" onclick="window.appActions.shiftTaskHistoryMonth(1)" style="transform:rotate(180deg)">${svg.back}</button>
         </div>
-        <div class="flex flex-col items-end gap-1"><span class="task-points-badge">+${item.points}p</span><span class="text-[11px]" style="color:${item.done ? '#16a34a' : 'var(--muted)'}">${item.done ? 'Gata' : 'Deschide'}</span></div>
-      </button>`;
+        <div class="space-y-2">${days.length ? days.map(day => {
+          const list = dailyTasksForDate(day);
+          const doneCount = list.filter(t => t.done).length;
+          return `<div class="task-day-row"><div class="min-w-0"><p class="text-sm capitalize" style="color:var(--text)">${formatFullDate(day)}</p><div class="task-chipline">${list.map(t => `<span class="task-chip ${t.done ? 'done' : 'missing'}">${escapeHTML(t.title)} · ${t.done ? 'gata' : 'nefăcut'}</span>`).join('')}</div></div><span class="text-xs muted whitespace-nowrap">${doneCount}/3</span></div>`;
+        }).join('') : emptyHTML('Nu există zile în luna asta.')}</div>
+      </div>`;
     }
 
     function tasksPageHTML() {
-      const daily = dailyTasksForToday();
-      const startTasks = startingTasksForUser(currentUser?.email);
-      const doneCount = daily.filter(t => t.done).length;
-      const percent = Math.round((doneCount / daily.length) * 100);
+      const list = dailyTasksForToday();
+      const doneCount = list.filter(t => t.done).length;
+      const percent = Math.round((doneCount / list.length) * 100);
       return `${backButton()}
         <div class="top-card mb-4">
           <div class="flex items-center gap-3">
@@ -2298,18 +2068,22 @@ function piggyPageHTML() {
               <h2 class="text-2xl font-medium tracking-[-.03em]">Rutina voastră</h2>
             </div>
           </div>
-          <p class="text-sm muted mt-3 leading-relaxed">Task-urile zilnice se refac în fiecare zi. Task-urile de început rămân acolo ca pași de bază.</p>
+          <p class="text-sm muted mt-3 leading-relaxed">Trei pași mici pe zi ca obiectivele voastre să avanseze fără stres.</p>
           <div class="progress mt-4"><span style="width:${percent}%"></span></div>
-          <p class="text-xs muted mt-2">${doneCount}/3 task-uri zilnice făcute azi</p>
-        </div>
-        ${pointsCardHTML()}
-        <div class="section">
-          <div class="section-head"><span>Task-uri de început</span><small>${startTasks.filter(t=>t.done).length}/3</small></div>
-          <div class="space-y-3">${startTasks.map(taskItemCard).join('')}</div>
+          <p class="text-xs muted mt-2">${doneCount}/3 task-uri făcute azi</p>
         </div>
         <div class="section">
           <div class="section-head"><span>Azi</span><small>${formatFullDate(todayISO())}</small></div>
-          <div class="space-y-3">${daily.map(taskItemCard).join('')}</div>
+          <div class="space-y-3">
+            ${list.map(item => `<button class="card task-action-card" onclick="window.appActions.openTaskAction('${item.id}')" style="width:100%; padding:13px 14px; display:flex; align-items:center; gap:12px; text-align:left;">
+              <div class="icon-btn" style="flex:0 0 auto; ${item.done ? 'background:rgba(34,197,94,.13); color:#16a34a;' : ''}">${item.done ? taskCheckIcon() : item.icon}</div>
+              <div class="min-w-0 flex-1">
+                <p class="text-sm" style="color:var(--text)">${escapeHTML(item.title)}</p>
+                <p class="text-xs muted mt-1">${escapeHTML(item.text)}</p>
+              </div>
+              <span class="text-[11px]" style="color:${item.done ? '#16a34a' : 'var(--muted)'}">${item.done ? 'Gata' : 'Deschide'}</span>
+            </button>`).join('')}
+          </div>
         </div>`;
     }
 
@@ -2348,8 +2122,7 @@ function piggyPageHTML() {
       const color = amount < 0 ? 'var(--danger)' : 'var(--success)';
       const piggy = isPiggyTransaction(t);
       const fromGame = String(t.source || '').toLowerCase() === 'game_withdrawal' || String(t.from_role || '').toUpperCase() === 'SOLD_JOCURI';
-      const fromReward = isPointRewardTransaction(t);
-      const text = piggy ? 'Monedă adăugată' : (fromReward ? 'Recompensă puncte la' : (fromGame ? 'Adăugat din joc' : (amount < 0 ? 'S-a scos din' : (t.from_role === t.to_role ? 'S-a pus la' : 'S-a oferit la'))));
+      const text = piggy ? 'Monedă adăugată' : (fromGame ? 'Adăugat din joc' : (amount < 0 ? 'S-a scos din' : (t.from_role === t.to_role ? 'S-a pus la' : 'S-a oferit la')));
       const title = piggy ? 'PUȘCULIȚĂ' : String(t.goal_title || '').toUpperCase();
       return `<div class="card" style="padding:11px 12px"><div class="flex items-center justify-between gap-3"><p class="text-xs muted">${text} <span style="color:var(--text)">${escapeHTML(title)}</span></p><p class="text-xs" style="color:${color}; white-space:nowrap;">${amount > 0 ? '+' : ''}${money(amount)}</p></div></div>`;
     }
@@ -2767,24 +2540,12 @@ function piggyPageHTML() {
     }
 
     function animatePiggyCoin(event, cents) {
+      // Doar efect de apăsare pe buton. Animația cu bănuțul zburător a fost scoasă.
       try {
         const btn = event?.currentTarget || event?.target?.closest?.('.coin-btn');
-        if (btn) {
-          btn.classList.add('pressed');
-          setTimeout(() => btn.classList.remove('pressed'), 190);
-        }
-        const pig = document.querySelector('.piggy-big-icon') || document.querySelector('.piggy-icon-box');
-        if (!btn || !pig) return;
-        const b = btn.getBoundingClientRect();
-        const p = pig.getBoundingClientRect();
-        const coin = document.createElement('div');
-        coin.className = 'piggy-flying-coin plain-coin';
-        coin.style.left = (b.left + b.width / 2) + 'px';
-        coin.style.top = (b.top + b.height / 2) + 'px';
-        coin.style.setProperty('--coin-x', ((p.left + p.width / 2) - (b.left + b.width / 2)) + 'px');
-        coin.style.setProperty('--coin-y', ((p.top + p.height / 2) - (b.top + b.height / 2)) + 'px');
-        document.body.appendChild(coin);
-        setTimeout(() => coin.remove(), 850);
+        if (!btn) return;
+        btn.classList.add('pressed');
+        setTimeout(() => btn.classList.remove('pressed'), 190);
       } catch (_) {}
     }
 
@@ -2831,88 +2592,10 @@ function piggyPageHTML() {
       openCalendar() { previousPage = currentPage; currentPage = 'calendar'; renderApp(); },
       openPiggy() { previousPage = currentPage; currentPage = 'piggy'; renderApp(); },
       openTasks() { previousPage = currentPage; currentPage = 'tasks'; selectedTaskHistoryMonth = selectedTaskHistoryMonth || firstOfMonth(todayISO()); renderApp(); },
-      openPointsInfo(auto = false) {
-        const s = pointSummary();
-        const activeGoals = goals
-          .filter(g => goalBelongsToFamily(g) && !isGoalDone(g))
-          .filter(g => g.owner === currentUser.email || isCommonGoal(g))
-          .filter(g => toCents(Number(g.target || 0) - Number(g.current || 0)) >= toCents(POINT_REWARD_AMOUNT))
-          .sort((a,b) => String(a.title || '').localeCompare(String(b.title || ''), 'ro'));
-        const latest = s.actions.slice().reverse().slice(0, 6);
-        modal.innerHTML = `<div class="modal-backdrop"><div class="sheet"><div class="grab"></div>
-          <h3 class="text-xl font-medium mb-1">Punctele tale</h3>
-          <p class="text-sm muted mb-4">Ai ${s.current} / ${POINT_REWARD_THRESHOLD} puncte. La prag primești ${POINT_REWARD_AMOUNT} RON din partea partenerului.</p>
-          <div class="points-card mb-4"><div class="flex items-end justify-between"><div><p class="muted text-xs">Progres</p><div class="points-big">${Math.min(s.current, POINT_REWARD_THRESHOLD)}</div></div><span class="task-points-badge">${s.claims} recompense</span></div><div class="points-progress"><span style="width:${s.percent}%"></span></div></div>
-          ${s.available ? `<div class="card mb-4"><p class="text-sm" style="color:var(--text)">Ai atins pragul 🎉</p><p class="text-xs muted mt-1">Alege obiectivul unde se adaugă automat ${POINT_REWARD_AMOUNT} RON din partea partenerului.</p></div>` : ''}
-          ${s.available ? (activeGoals.length ? `<div class="reward-modal-list mb-4">${activeGoals.map(g => { const remaining = Math.max(0, Number(g.target || 0) - Number(g.current || 0)); return `<button class="reward-goal-option" onclick="window.appActions.claimPointReward('${g.id}')"><p class="text-sm" style="color:var(--text)">${escapeHTML(String(g.title || '').toUpperCase())}</p><p class="text-xs muted mt-1">lipsă ${money(remaining)} RON</p></button>`; }).join('')}</div>` : `<div class="card mb-4"><p class="text-sm muted">Nu ai momentan un obiectiv activ cu cel puțin ${POINT_REWARD_AMOUNT} RON lipsă.</p></div>`) : ''}
-          <div class="section mb-4"><div class="section-head"><span>Ultimele puncte</span><small>${s.actions.length}</small></div><div class="space-y-2">${latest.length ? latest.map(a => `<div class="card" style="padding:10px 12px"><div class="flex justify-between gap-3"><p class="text-xs" style="color:var(--text)">${escapeHTML(a.title)}</p><span class="task-points-badge">+${a.points}p</span></div></div>`).join('') : emptyHTML('Încă nu ai puncte.')}</div></div>
-          <button class="btn btn-soft btn-full" onclick="window.appActions.closeModal()">Închide</button>
-        </div></div>`;
-      },
-      async claimPointReward(goalId) {
-        const s = pointSummary();
-        if (!s.available) return alert('Nu ai încă 100 de puncte.');
-        const goal = goals.find(g => g.id === goalId);
-        if (!goal || !goalBelongsToFamily(goal) || isGoalDone(goal) || !(goal.owner === currentUser.email || isCommonGoal(goal))) return alert('Alege un obiectiv al tău sau comun.');
-        const remainingCents = toCents(Number(goal.target || 0) - Number(goal.current || 0));
-        if (remainingCents < toCents(POINT_REWARD_AMOUNT)) return alert('Obiectivul ales are mai puțin de 100 RON lipsă. Alege alt obiectiv.');
-        const partner = partnerEmail() || (getRole(currentUser.email) === 'sot' ? PIN_USERS['0706'].email : PIN_USERS['2807'].email);
-        const oldCurrent = Number(goal.current || 0);
-        const newCurrent = fromCents(toCents(oldCurrent) + toCents(POINT_REWARD_AMOUNT));
-        const nowIso = new Date().toISOString();
-        const localTransaction = {
-          id:'local-points-reward-' + Date.now(),
-          goal_id: goal.id,
-          goal_title: String(goal.title || '').toUpperCase(),
-          amount: POINT_REWARD_AMOUNT,
-          from_role: partner,
-          to_role: currentUser.email,
-          date: todayISO(),
-          timestamp: nowIso,
-          family_code: familyCode,
-          source:'points_reward',
-          note:'Recompensă puncte: ' + POINT_REWARD_THRESHOLD + ' puncte atinse'
-        };
-        goal.current = newCurrent;
-        transactions.unshift(localTransaction);
-        this.closeModal();
-        suppressSoftUntil = Date.now() + 1600;
-        showTaskToast('Recompensă de ' + POINT_REWARD_AMOUNT + ' RON adăugată', 0);
-        showConfetti();
-        renderApp(true);
-        try {
-          const upd = await supabase.from('goals').update({ current:newCurrent }).eq('id', goal.id).select('current').maybeSingle();
-          if (upd.error) throw upd.error;
-          const tr = await supabase.from('transactions').insert([{
-            goal_id: goal.id,
-            goal_title: String(goal.title || '').toUpperCase(),
-            amount: POINT_REWARD_AMOUNT,
-            from_role: partner,
-            to_role: currentUser.email,
-            date: todayISO(),
-            timestamp: nowIso,
-            family_code: familyCode,
-            source:'points_reward',
-            note:'Recompensă puncte: ' + POINT_REWARD_THRESHOLD + ' puncte atinse'
-          }]).select('*').maybeSingle();
-          if (tr.error) throw tr.error;
-          if (tr.data) transactions = transactions.map(t => t.id === localTransaction.id ? tr.data : t);
-          if (oldCurrent < Number(goal.target || 0) && newCurrent >= Number(goal.target || 0)) markGoalCompleted(goal);
-          suppressSoftUntil = Date.now() + 1600;
-          renderApp(true);
-          scheduleSoftRefresh();
-        } catch (error) {
-          goal.current = oldCurrent;
-          transactions = transactions.filter(t => t.id !== localTransaction.id);
-          renderApp(true);
-          alert('Eroare la recompensa cu puncte: ' + (error.message || error));
-        }
-      },
       openTaskAction(id) {
-        if (id === 'goal' || id === 'daily_progress' || id === 'start_goal') return this.openAddGoal();
-        if (id === 'piggy' || id === 'daily_piggy') return this.openPiggy();
-        if (id === 'start_avatar') return this.switchPage('profile');
-        if (id === 'offer' || id === 'daily_offer' || id === 'start_gift') {
+        if (id === 'goal') return this.openAddGoal();
+        if (id === 'piggy') return this.openPiggy();
+        if (id === 'offer') {
           previousPage = 'tasks';
           currentPage = 'home';
           renderApp();
@@ -3560,7 +3243,6 @@ function piggyPageHTML() {
           if (p) p.avatar = avatar;
           else profiles.push({ id:currentUser.id, email:currentUser.email, role, avatar, family_code: familyCode });
           renderApp(true);
-          checkNewTaskCompletions();
           scheduleSoftRefresh();
         } catch (error) {
           alert(error.message || 'Nu am putut procesa poza.');
@@ -3623,6 +3305,7 @@ function piggyPageHTML() {
         if (!confirm('Ștergi istoricul calculatorului?')) return;
         const before = calculatorHistory.slice();
         calculatorHistory = [];
+        calcNoteDraft = '';
         renderApp(true);
         const { error } = await supabase.from('calculator_history').delete().eq('user_email', currentUser.email);
         if (error) {
@@ -3647,7 +3330,7 @@ function piggyPageHTML() {
         transactions = [];
         profiles = [];
         calculatorHistory = [];
-        calcDraftNote = '';
+        calcNoteDraft = '';
         gameRooms = [];
         gameWallets = [];
         gameTransactions = [];
@@ -3660,20 +3343,13 @@ function piggyPageHTML() {
         suppressSoftUntil = 0;
         authHTML(true);
       },
-      updateCalcDraftNote(value) { calcDraftNote = value || ''; },
-      syncCalcDraftNote() { const el = document.getElementById('calcNoteInput'); if (el) calcDraftNote = el.value || ''; },
-      calcPress(v) {
-        this.syncCalcDraftNote();
-        if (v === 'C') { calcExpression=''; calcResult='0'; renderApp(); return; }
-        calcExpression += v === '×' ? '*' : v === '÷' ? '/' : v;
-        renderApp();
-      },
-      calcBack() { this.syncCalcDraftNote(); calcExpression = calcExpression.slice(0,-1); renderApp(); },
-      calcEquals() { this.syncCalcDraftNote(); try { if (!/^[0-9+\-*/().\s]+$/.test(calcExpression)) throw new Error(); const r = Function('"use strict";return ('+calcExpression+')')(); calcResult = Number.isFinite(Number(r)) ? String(Math.round(Number(r)*100)/100) : 'Eroare'; } catch { calcResult='Eroare'; } renderApp(); },
+      calcPress(v) { if (v === 'C') { calcExpression=''; calcResult='0'; renderApp(); return; } calcExpression += v === '×' ? '*' : v === '÷' ? '/' : v; renderApp(); },
+      updateCalcNote(value) { calcNoteDraft = String(value || ''); },
+      calcBack() { calcExpression = calcExpression.slice(0,-1); renderApp(); },
+      calcEquals() { try { if (!/^[0-9+\-*/().\s]+$/.test(calcExpression)) throw new Error(); const r = Function('"use strict";return ('+calcExpression+')')(); calcResult = Number.isFinite(Number(r)) ? String(Math.round(Number(r)*100)/100) : 'Eroare'; } catch { calcResult='Eroare'; } renderApp(); },
       async saveCalc() {
         if (!calcExpression || calcResult === '0' || calcResult === 'Eroare') return alert('Fă întâi un calcul valid.');
-        this.syncCalcDraftNote();
-        const note = calcDraftNote.trim();
+        const note = String(calcNoteDraft || '').trim();
         const btn = document.getElementById('saveCalcBtn');
         if (btn) { btn.disabled = true; btn.textContent = 'Se salvează...'; }
         const payload = { user_email:currentUser.email, expression:calcExpression, result:calcResult, note };
@@ -3684,7 +3360,7 @@ function piggyPageHTML() {
         }
         const saved = data || { ...payload, id:'local-calc-' + Date.now(), created_at:new Date().toISOString() };
         calculatorHistory = [saved, ...calculatorHistory.filter(c => c.id !== saved.id)].slice(0, 30);
-        calcDraftNote = '';
+        calcNoteDraft = '';
         suppressSoftUntil = Date.now() + 1400;
         const scroller = app.querySelector('.screen');
         const y = scroller ? scroller.scrollTop : 0;
