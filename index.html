@@ -904,7 +904,7 @@
 
     const supabaseUrl = 'https://hfqsouqtqvyxegcrabnc.supabase.co';
     const supabaseKey = 'sb_publishable_eqlbyUXpwcp-i-dPhFPsmA_wHqDW1AD';
-    const supabase = createClient(supabaseUrl, supabaseKey, { auth: { persistSession: true, autoRefreshToken: true } });
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
     let currentUser = null;
     let goals = [];
@@ -932,6 +932,11 @@
     let selectedGoalListEmail = '';
     let selectedPartnerProfileEmail = '';
     const DEFAULT_FAMILY_CODE = '280706';
+    const PIN_USERS = {
+      '2807': { id: '11111111-1111-4111-8111-111111111111', email: 'ionut7628c@gmail.com', role: 'sot', label: 'Soț' },
+      '0706': { id: '22222222-2222-4222-8222-222222222222', email: 'stan91874@gmail.com', role: 'sotie', label: 'Soție' }
+    };
+    const PIN_SESSION_KEY = 'familie_pin_session_email_280706';
     window.selectedSignupRole = 'sot';
 
     const app = document.getElementById('app');
@@ -1027,18 +1032,15 @@
 
     async function ensureOwnProfile() {
       if (!currentUser) return;
-      const role = currentUser.user_metadata?.role || window.selectedSignupRole || 'sot';
-      const pendingCode = normalizeFamilyCode(sessionStorage.getItem('pendingFamilyCode') || '');
-      const storedCode = normalizeFamilyCode(localStorage.getItem(userFamilyStorageKey()) || '');
-      let existing = null;
-      try {
-        const res = await supabase.from('profiles').select('id,email,role,family_code').eq('id', currentUser.id).maybeSingle();
-        existing = res.data || null;
-      } catch (_) {}
-      familyCode = normalizeFamilyCode(pendingCode || storedCode || existing?.family_code || currentUser.user_metadata?.family_code || DEFAULT_FAMILY_CODE);
+      const role = currentUser.user_metadata?.role || 'sot';
+      familyCode = DEFAULT_FAMILY_CODE;
       localStorage.setItem(userFamilyStorageKey(), familyCode);
-      sessionStorage.removeItem('pendingFamilyCode');
-      await supabase.from('profiles').upsert({ id: currentUser.id, email: currentUser.email, role: existing?.role || role, family_code: familyCode }, { onConflict: 'id' });
+      await supabase.from('profiles').upsert({
+        id: currentUser.id,
+        email: currentUser.email,
+        role,
+        family_code: familyCode
+      }, { onConflict: 'id' });
     }
 
     async function fetchData({ render = true, soft = false } = {}) {
@@ -1142,34 +1144,23 @@
     }
 
     function authHTML(isLogin = true) {
-      const roleSelect = isLogin ? '' : `
-        <div>
-          <p class="label">Profil</p>
-          <div class="grid grid-cols-2 gap-2">
-            <button id="roleSot" class="btn btn-gold" onclick="window.appActions.selectRole('sot')">Soț</button>
-            <button id="roleSotie" class="btn btn-soft" onclick="window.appActions.selectRole('sotie')">Soție</button>
-          </div>
-        </div>`;
       app.innerHTML = `
         <div class="screen no-nav flex flex-col justify-center">
-          <div class="top-card mb-5">
-            <div class="icon-btn mb-5">${svg.home}</div>
+          <div class="top-card mb-5 text-center">
+            <div class="icon-btn mb-5 mx-auto">${svg.home}</div>
             <h1 class="text-[30px] leading-tight font-medium tracking-[-.04em]">Obiectivele Familiei</h1>
-            <p class="text-sm muted mt-2">${isLogin ? 'Conectare în aplicație' : 'Creează contul vostru'}</p>
+            <p class="text-sm muted mt-2">Intră rapid cu PIN</p>
           </div>
           <div class="card space-y-4">
-            ${roleSelect}
-            <div><p class="label">Email</p><input id="emailInput" class="input" type="email" autocomplete="email" placeholder="tu@familie.ro"></div>
-            <div><p class="label">Parolă</p><input id="passInput" class="input" type="password" autocomplete="${isLogin ? 'current-password' : 'new-password'}" placeholder="••••••••"></div>
-            <div><p class="label">Cod familie</p><input id="familyCodeInput" class="input" type="text" autocomplete="off" value="280706" placeholder="280706" style="text-transform:uppercase; letter-spacing:.04em;" oninput="this.value=this.value.toLocaleUpperCase('ro-RO').replace(/[^A-Z0-9ĂÂÎȘŞȚŢ_-]/g,'')"></div>
-            <label class="flex items-center gap-3 text-sm muted px-1">
-              <input id="keepLoggedInput" type="checkbox" checked style="accent-color:#d6b15d; width:18px; height:18px;">
-              Ține-mă conectat
-            </label>
-            <button id="authBtn" class="btn btn-gold btn-full" onclick="window.appActions.handleAuth(${isLogin})">${isLogin ? 'Conectare' : 'Creează cont'}</button>
+            <div>
+              <p class="label">PIN</p>
+              <input id="pinInput" class="input text-center" type="password" inputmode="numeric" autocomplete="one-time-code" maxlength="4" placeholder="••••" style="font-size:28px;letter-spacing:.35em;font-weight:500;" onkeydown="if(event.key==='Enter') window.appActions.handlePinLogin()">
+            </div>
+            <button id="authBtn" class="btn btn-gold btn-full" onclick="window.appActions.handlePinLogin()">Intră în aplicație</button>
+            <p class="text-xs muted text-center leading-relaxed">PIN Soț: 2807 • PIN Soție: 0706</p>
           </div>
-          <button class="mt-5 text-sm muted" onclick="window.appActions.toggleAuthMode(${!isLogin})">${isLogin ? 'Nu ai cont? Creează unul.' : 'Ai deja cont? Conectează-te.'}</button>
         </div>`;
+      setTimeout(() => document.getElementById('pinInput')?.focus(), 120);
     }
 
     function homeHTML() {
@@ -1666,39 +1657,32 @@
         a.className = role === 'sot' ? 'btn btn-gold' : 'btn btn-soft';
         b.className = role === 'sotie' ? 'btn btn-gold' : 'btn btn-soft';
       },
-      async handleAuth(isLogin) {
-        const email = document.getElementById('emailInput').value.trim();
-        const password = document.getElementById('passInput').value;
-        const keep = document.getElementById('keepLoggedInput')?.checked !== false;
-        const inputFamilyCode = normalizeFamilyCode(document.getElementById('familyCodeInput')?.value || DEFAULT_FAMILY_CODE);
+      handlePinLogin() {
+        const pin = String(document.getElementById('pinInput')?.value || '').trim();
+        const picked = PIN_USERS[pin];
         const btn = document.getElementById('authBtn');
-        if (!email || !password) return alert('Completează emailul și parola.');
-        btn.textContent = 'Se procesează...'; btn.disabled = true;
-        try {
-          if (inputFamilyCode) sessionStorage.setItem('pendingFamilyCode', inputFamilyCode);
-          let result;
-          if (isLogin) result = await supabase.auth.signInWithPassword({ email, password });
-          else result = await supabase.auth.signUp({ email, password, options: { data: { role: window.selectedSignupRole, family_code: inputFamilyCode } } });
-          if (result.error) throw result.error;
-          localStorage.setItem('keepLogged', keep ? '1' : '0');
-          currentUser = result.data.user || result.data.session?.user;
-          if (!currentUser) {
-            const { data } = await supabase.auth.getSession();
-            currentUser = data.session?.user || null;
-          }
-          if (!currentUser) throw new Error('Cont creat, dar sesiunea nu este activă. Încearcă să te conectezi.');
-          currentPage = 'home';
-          previousPage = 'home';
-          selectedGoalId = null;
-          await ensureOwnProfile();
-          dataLoadedOnce = false;
-          completedNotified = new Set();
-          await fetchData();
-          setupRealtime();
-        } catch (e) {
-          alert('Eroare: ' + (e.message || e));
-          btn.textContent = isLogin ? 'Conectare' : 'Creează cont'; btn.disabled = false;
-        }
+        if (!picked) return alert('PIN greșit. Încearcă iar.');
+        if (btn) { btn.textContent = 'Se deschide...'; btn.disabled = true; }
+        localStorage.setItem(PIN_SESSION_KEY, picked.email);
+        currentUser = {
+          id: picked.id,
+          email: picked.email,
+          user_metadata: { role: picked.role, family_code: DEFAULT_FAMILY_CODE }
+        };
+        familyCode = DEFAULT_FAMILY_CODE;
+        currentPage = 'home';
+        previousPage = 'home';
+        selectedGoalId = null;
+        dataLoadedOnce = false;
+        completedNotified = new Set();
+        ensureOwnProfile()
+          .then(() => fetchData())
+          .then(() => setupRealtime())
+          .catch((error) => {
+            console.error(error);
+            alert('Eroare la autentificare: ' + (error.message || error));
+            authHTML(true);
+          });
       },
       switchPage(page) { if (page !== 'partner') selectedPartnerProfileEmail = ''; previousPage = currentPage; currentPage = page; renderApp(); },
       goBack() { currentPage = previousPage && previousPage !== currentPage ? previousPage : 'home'; renderApp(); },
@@ -1744,10 +1728,6 @@
         btn.textContent = 'Salvez...'; btn.disabled = true;
         let localGoal = null;
         try {
-          if (!currentUser?.email) {
-            const { data: sessionData } = await supabase.auth.getSession();
-            currentUser = sessionData.session?.user || currentUser;
-          }
           if (!currentUser?.email) throw new Error('Nu ești conectat. Reconectează-te și încearcă iar.');
           localGoal = { id: crypto.randomUUID(), title, target, current: 0, owner: currentUser.email, family_code: familyCode, goal_type: goalType, created_at: new Date().toISOString() };
           goals.unshift(localGoal);
@@ -1755,14 +1735,9 @@
           suppressSoftUntil = Date.now() + 1300;
           renderApp();
 
-          const rpc = await supabase.rpc('create_goal_safe', { p_title: title, p_target: target, p_goal_type: goalType });
-          if (rpc.error) {
-            const direct = await supabase.from('goals').insert({ title, target, current: 0, owner: currentUser.email, family_code: familyCode, goal_type: goalType }).select('*').maybeSingle();
-            if (direct.error) throw direct.error;
-            if (direct.data) goals = goals.map(g => g.id === localGoal.id ? direct.data : g);
-          } else if (rpc.data) {
-            goals = goals.map(g => g.id === localGoal.id ? rpc.data : g);
-          }
+          const direct = await supabase.from('goals').insert({ title, target, current: 0, owner: currentUser.email, family_code: familyCode, goal_type: goalType }).select('*').maybeSingle();
+          if (direct.error) throw direct.error;
+          if (direct.data) goals = goals.map(g => g.id === localGoal.id ? direct.data : g);
           suppressSoftUntil = Date.now() + 1300;
           renderApp(true);
           scheduleSoftRefresh();
@@ -1792,14 +1767,8 @@
         suppressSoftUntil = Date.now() + 1300;
         renderApp(true);
         try {
-          const rpc = await supabase.rpc('update_goal_target_safe', { p_goal_id: id, p_new_target: newTarget });
-          if (rpc.error) {
-            const msg = String(rpc.error.message || rpc.error.details || rpc.error.hint || '').toLowerCase();
-            const missingRpc = rpc.error.code === 'PGRST202' || msg.includes('could not find') || msg.includes('function');
-            if (!missingRpc) throw rpc.error;
-            const upd = await supabase.from('goals').update({ target: newTarget }).eq('id', id).select('target').maybeSingle();
-            if (upd.error) throw upd.error;
-          }
+          const upd = await supabase.from('goals').update({ target: newTarget }).eq('id', id).select('target').maybeSingle();
+          if (upd.error) throw upd.error;
           if (!wasDone && isGoalDone(g)) markGoalCompleted(g);
           suppressSoftUntil = Date.now() + 1300;
           scheduleSoftRefresh();
@@ -1824,16 +1793,10 @@
         suppressSoftUntil = Date.now() + 1300;
         renderApp(true);
         try {
-          const rpc = await supabase.rpc('delete_goal_safe', { p_goal_id: id });
-          if (rpc.error) {
-            const msg = String(rpc.error.message || rpc.error.details || rpc.error.hint || '').toLowerCase();
-            const missingRpc = rpc.error.code === 'PGRST202' || msg.includes('could not find') || msg.includes('function');
-            if (!missingRpc) throw rpc.error;
-            const delTrans = await supabase.from('transactions').delete().eq('goal_id', id);
-            if (delTrans.error) throw delTrans.error;
-            const delGoal = await supabase.from('goals').delete().eq('id', id);
-            if (delGoal.error) throw delGoal.error;
-          }
+          const delTrans = await supabase.from('transactions').delete().eq('goal_id', id);
+          if (delTrans.error) throw delTrans.error;
+          const delGoal = await supabase.from('goals').delete().eq('id', id);
+          if (delGoal.error) throw delGoal.error;
           suppressSoftUntil = Date.now() + 1300;
           scheduleSoftRefresh();
         } catch (error) {
@@ -1897,17 +1860,10 @@
         renderApp(true);
 
         try {
-          const rpc = await supabase.rpc('adjust_goal_amount', { p_goal_id: id, p_delta: requestedDelta });
           let finalAmount = optimistic;
-          if (rpc.error) {
-            const msg = String(rpc.error.message || rpc.error.details || rpc.error.hint || '');
-            const missingRpc = rpc.error.code === 'PGRST202' || msg.toLowerCase().includes('could not find') || msg.toLowerCase().includes('function');
-            if (!missingRpc) throw rpc.error;
-            const fallbackAmount = old + requestedDelta;
-            const upd = await supabase.from('goals').update({ current: fallbackAmount }).eq('id', id).select('current').maybeSingle();
-            if (upd.error) throw upd.error;
-            if (upd.data?.current !== undefined) finalAmount = Number(upd.data.current);
-          } else if (rpc.data !== null && rpc.data !== undefined) finalAmount = Number(rpc.data);
+          const upd = await supabase.from('goals').update({ current: optimistic }).eq('id', id).select('current').maybeSingle();
+          if (upd.error) throw upd.error;
+          if (upd.data?.current !== undefined) finalAmount = Number(upd.data.current);
 
           const actualDelta = finalAmount - old;
           if (actualDelta === 0) throw new Error('Obiectiv finalizat. Nu mai poți modifica suma.');
@@ -2037,16 +1993,10 @@
         localStorage.setItem(userFamilyStorageKey(), familyCode);
         localStorage.setItem('familyCodeLocked:' + currentUser.id, '1');
         try {
-          const rpc = await supabase.rpc('set_my_family_code', { p_family_code: familyCode });
-          if (rpc.error) {
-            const msg = String(rpc.error.message || rpc.error.details || '').toLowerCase();
-            const missingRpc = rpc.error.code === 'PGRST202' || msg.includes('function') || msg.includes('could not find');
-            if (!missingRpc) throw rpc.error;
-            const up = await supabase.from('profiles').upsert({ id: currentUser.id, email: currentUser.email, role: getRole(currentUser.email), family_code: familyCode }, { onConflict: 'id' });
-            if (up.error) throw up.error;
-            await supabase.from('goals').update({ family_code: familyCode }).eq('owner', currentUser.email);
-            await supabase.from('transactions').update({ family_code: familyCode }).or(`from_role.eq.${currentUser.email},to_role.eq.${currentUser.email}`);
-          }
+          const up = await supabase.from('profiles').upsert({ id: currentUser.id, email: currentUser.email, role: getRole(currentUser.email), family_code: familyCode }, { onConflict: 'id' });
+          if (up.error) throw up.error;
+          await supabase.from('goals').update({ family_code: familyCode }).eq('owner', currentUser.email);
+          await supabase.from('transactions').update({ family_code: familyCode }).or(`from_role.eq.${currentUser.email},to_role.eq.${currentUser.email}`);
           dataLoadedOnce = false;
           completedNotified = new Set();
           await fetchData({ soft: true });
@@ -2066,12 +2016,20 @@
       },
       async deleteAccount() {
         try {
-          const { error } = await supabase.rpc('delete_my_account');
-          if (error) throw error;
-          localStorage.removeItem('keepLogged');
-          localStorage.removeItem(userFamilyStorageKey());
-          await supabase.auth.signOut();
+          const email = currentUser?.email;
+          if (!email) throw new Error('Nu ești conectat.');
+          await supabase.from('transactions').delete().or(`from_role.eq.${email},to_role.eq.${email}`);
+          const ownGoals = goals.filter(g => g.owner === email).map(g => g.id);
+          for (const gid of ownGoals) await supabase.from('transactions').delete().eq('goal_id', gid);
+          await supabase.from('goals').delete().eq('owner', email);
+          await supabase.from('calculator_history').delete().eq('user_email', email);
+          await supabase.from('profiles').delete().eq('email', email);
+          localStorage.removeItem(PIN_SESSION_KEY);
           currentUser = null;
+          goals = [];
+          transactions = [];
+          profiles = [];
+          calculatorHistory = [];
           modal.innerHTML = '';
           authHTML(true);
         } catch (error) {
@@ -2098,7 +2056,7 @@
         }
       },
       toggleTheme() { const dark = document.body.classList.toggle('dark-mode'); localStorage.setItem('appTheme', dark ? 'dark' : 'light'); },
-      async logout() { const k = userFamilyStorageKey(); await supabase.auth.signOut(); localStorage.removeItem('keepLogged'); sessionStorage.removeItem('pendingFamilyCode'); currentUser = null; familyCode = ''; dataLoadedOnce = false; completedNotified = new Set(); authHTML(true); },
+      async logout() { localStorage.removeItem(PIN_SESSION_KEY); currentUser = null; familyCode = ''; goals = []; transactions = []; profiles = []; calculatorHistory = []; dataLoadedOnce = false; completedNotified = new Set(); authHTML(true); },
       calcPress(v) { if (v === 'C') { calcExpression=''; calcResult='0'; renderApp(); return; } calcExpression += v === '×' ? '*' : v === '÷' ? '/' : v; renderApp(); },
       calcBack() { calcExpression = calcExpression.slice(0,-1); renderApp(); },
       calcEquals() { try { if (!/^[0-9+\-*/().\s]+$/.test(calcExpression)) throw new Error(); const r = Function('"use strict";return ('+calcExpression+')')(); calcResult = Number.isFinite(Number(r)) ? String(Math.round(Number(r)*100)/100) : 'Eroare'; } catch { calcResult='Eroare'; } renderApp(); },
@@ -2107,16 +2065,15 @@
 
     async function start() {
       try {
-        const { data, error } = await supabase.auth.getSession();
-        if (error) throw error;
-        const session = data.session;
-        if (session && localStorage.getItem('keepLogged') === '0') {
-          await supabase.auth.signOut();
-          authHTML(true);
-          return;
-        }
-        if (session) {
-          currentUser = session.user;
+        const savedEmail = localStorage.getItem(PIN_SESSION_KEY);
+        const picked = Object.values(PIN_USERS).find(u => u.email === savedEmail);
+        if (picked) {
+          currentUser = {
+            id: picked.id,
+            email: picked.email,
+            user_metadata: { role: picked.role, family_code: DEFAULT_FAMILY_CODE }
+          };
+          familyCode = DEFAULT_FAMILY_CODE;
           currentPage = 'home';
           previousPage = 'home';
           selectedGoalId = null;
@@ -2125,18 +2082,9 @@
           completedNotified = new Set();
           await fetchData();
           setupRealtime();
-        } else authHTML(true);
-        supabase.auth.onAuthStateChange(async (_event, session) => {
-          if (session?.user && session.user.id !== currentUser?.id) {
-            currentUser = session.user;
-            await ensureOwnProfile();
-            await fetchData();
-            setupRealtime();
-          } else if (!session && currentUser) {
-            currentUser = null;
-            authHTML(true);
-          }
-        });
+        } else {
+          authHTML(true);
+        }
       } catch (e) {
         console.error(e);
         app.innerHTML = `<div class="screen no-nav flex flex-col justify-center"><div class="card text-center"><h2 class="text-xl font-medium mb-2">Eroare la pornire</h2><p class="text-sm muted mb-4">${escapeHTML(e.message || e)}</p><button class="btn btn-gold btn-full" onclick="location.reload()">Reîncarcă</button></div></div>`;
