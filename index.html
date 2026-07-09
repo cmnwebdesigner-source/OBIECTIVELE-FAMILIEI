@@ -210,6 +210,7 @@
             let content = '';
             if (currentTab === 'home') content = getHomeHTML();
             else if (currentTab === 'profile') content = getProfileHTML();
+            else if (currentTab === 'partner') content = getPartnerProfileHTML(); // Adaugat profil partener
 
             appContainer.innerHTML = `
                 <div class="flex-1 overflow-y-auto hide-scroll pb-24 p-4 md:p-6 fade-in h-full">
@@ -225,6 +226,10 @@
             const todaysTransactions = transactions.filter(t => t.date === selectedDate);
             const totalAddedToday = todaysTransactions.reduce((sum, t) => sum + Number(t.amount), 0);
 
+            // Calculare statistici cadouri
+            const totalOferit = transactions.filter(t => t.from_role === currentUser.email).reduce((sum, t) => sum + Number(t.amount), 0);
+            const totalPrimit = transactions.filter(t => t.to_role === currentUser.email).reduce((sum, t) => sum + Number(t.amount), 0);
+
             const myRole = currentUser.user_metadata?.role || 'sot';
             const partnerRoleName = myRole === 'sot' ? 'Soției' : 'Soțului';
             const myRoleName = myRole === 'sot' ? 'Soțul' : 'Soția';
@@ -232,7 +237,6 @@
             const myAccent = myRole === 'sot' ? 'indigo' : 'rose';
 
             return `
-                <!-- Header -->
                 <header class="flex justify-between items-center mb-6">
                     <div>
                         <h2 class="font-bold text-slate-800 dark:text-white text-2xl">Salut, ${myRoleName}! 👋</h2>
@@ -241,8 +245,19 @@
                     ${getAvatarHtml(12)}
                 </header>
 
+                <!-- Stats Row -->
+                <div class="grid grid-cols-2 gap-4 mb-6">
+                    <div class="bg-slate-100 dark:bg-slate-800/80 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col justify-center">
+                        <p class="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider mb-1"><i class="fas fa-arrow-up text-indigo-500 mr-1"></i>Ai Oferit</p>
+                        <p class="text-2xl font-black text-slate-800 dark:text-white">${totalOferit} <span class="text-sm font-medium text-slate-500">RON</span></p>
+                    </div>
+                    <div class="bg-slate-100 dark:bg-slate-800/80 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col justify-center">
+                        <p class="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider mb-1"><i class="fas fa-arrow-down text-rose-500 mr-1"></i>Ai Primit</p>
+                        <p class="text-2xl font-black text-slate-800 dark:text-white">${totalPrimit} <span class="text-sm font-medium text-slate-500">RON</span></p>
+                    </div>
+                </div>
+
                 <div class="space-y-6">
-                    <!-- My Goals -->
                     <section class="bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-sm border border-slate-100 dark:border-slate-700 border-t-4 border-t-${myAccent}-500">
                         <h3 class="font-bold text-lg text-slate-800 dark:text-white mb-4 border-b border-slate-100 dark:border-slate-700 pb-2">Obiectivele Mele</h3>
                         <div class="space-y-4">
@@ -250,11 +265,14 @@
                         </div>
                     </section>
 
-                    <!-- Partner's Goals -->
-                    <section class="bg-${partnerAccent}-50 dark:bg-${partnerAccent}-900/20 rounded-2xl p-5 shadow-sm border border-${partnerAccent}-100 dark:border-${partnerAccent}-500/30 border-t-4 border-t-${partnerAccent}-500">
-                        <h3 class="font-bold text-lg text-${partnerAccent}-900 dark:text-${partnerAccent}-300 mb-4 border-b border-${partnerAccent}-100 dark:border-${partnerAccent}-500/30 pb-2">Obiectivele ${partnerRoleName}</h3>
+                    <section class="bg-${partnerAccent}-50 dark:bg-${partnerAccent}-900/20 rounded-2xl p-5 shadow-sm border border-${partnerAccent}-100 dark:border-${partnerAccent}-500/30 border-t-4 border-t-${partnerAccent}-500 transition-transform active:scale-95">
+                        <div onclick="window.appActions.switchTab('partner')" class="flex justify-between items-center mb-4 border-b border-${partnerAccent}-200 dark:border-${partnerAccent}-500/30 pb-2 cursor-pointer group">
+                            <h3 class="font-bold text-lg text-${partnerAccent}-900 dark:text-${partnerAccent}-300">Obiectivele ${partnerRoleName}</h3>
+                            <span class="text-sm font-bold text-${partnerAccent}-600 dark:text-${partnerAccent}-400 group-hover:underline flex items-center gap-1">Vezi Profil <i class="fas fa-chevron-right text-[10px]"></i></span>
+                        </div>
                         <div class="space-y-4">
-                            ${partnerGoals.length === 0 ? `<p class="text-center text-sm text-${partnerAccent}-400 py-4">Partenerul nu are obiective.</p>` : partnerGoals.map(g => generateGoalCard(g, false, partnerAccent)).join('')}
+                            ${partnerGoals.length === 0 ? `<p class="text-center text-sm text-${partnerAccent}-400 py-4">Partenerul nu are obiective.</p>` : partnerGoals.slice(0, 2).map(g => generateGoalCard(g, false, partnerAccent)).join('')}
+                            ${partnerGoals.length > 2 ? `<button onclick="window.appActions.switchTab('partner')" class="w-full text-center text-sm font-medium text-${partnerAccent}-600 dark:text-${partnerAccent}-400 py-2 bg-${partnerAccent}-100 dark:bg-${partnerAccent}-900/50 rounded-xl mt-2">Vezi toate cele ${partnerGoals.length} obiective</button>` : ''}
                         </div>
                     </section>
 
@@ -285,6 +303,49 @@
                             }).join('')}
                         </div>
                     </section>
+                </div>
+            `;
+        };
+
+        const getPartnerProfileHTML = () => {
+            const partnerGoals = goals.filter(g => g.owner !== currentUser.email);
+            const myRole = currentUser.user_metadata?.role || 'sot';
+            const partnerRoleName = myRole === 'sot' ? 'Soția' : 'Soțul';
+            const partnerAccent = myRole === 'sot' ? 'rose' : 'indigo';
+            
+            // Totalul pe care EU l-am trimis PARTENERULUI
+            const totalOferitEi = transactions.filter(t => t.from_role === currentUser.email).reduce((sum, t) => sum + Number(t.amount), 0);
+
+            return `
+                <div class="fade-in max-w-sm mx-auto mt-2">
+                    <button onclick="window.appActions.switchTab('home')" class="mb-6 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white transition-colors flex items-center gap-2 font-medium bg-slate-100 dark:bg-slate-800 px-4 py-2 rounded-full w-max">
+                        <i class="fas fa-arrow-left"></i> Acasă
+                    </button>
+                    
+                    <div class="bg-${partnerAccent}-50 dark:bg-${partnerAccent}-900/20 rounded-3xl p-6 shadow-sm border border-${partnerAccent}-100 dark:border-${partnerAccent}-500/30 flex flex-col items-center mb-8 relative">
+                        <div class="w-24 h-24 rounded-full bg-gradient-to-tr from-${partnerAccent}-400 to-${partnerAccent}-600 text-white flex items-center justify-center text-4xl font-bold shadow-lg shadow-${partnerAccent}-200 dark:shadow-none mb-4 border-4 border-white dark:border-slate-800">
+                            <i class="fas fa-${myRole === 'sot' ? 'female' : 'male'}"></i>
+                        </div>
+                        <h2 class="font-bold text-2xl text-slate-800 dark:text-white mb-1">Profil ${partnerRoleName}</h2>
+                        <div class="bg-white dark:bg-slate-800 px-4 py-2 rounded-xl mt-3 border border-${partnerAccent}-100 dark:border-${partnerAccent}-700 shadow-sm">
+                            <p class="text-xs text-slate-500 dark:text-slate-400 font-medium uppercase text-center mb-1">Total dăruit de tine</p>
+                            <p class="font-black text-xl text-${partnerAccent}-600 dark:text-${partnerAccent}-400 text-center">${totalOferitEi} RON</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between mb-4 px-2">
+                        <h3 class="font-bold text-xl text-slate-800 dark:text-white">Toate Obiectivele</h3>
+                        <span class="bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold px-2 py-1 rounded-lg">${partnerGoals.length} active</span>
+                    </div>
+                    
+                    <div class="space-y-4">
+                        ${partnerGoals.length === 0 ? `
+                            <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl text-center border border-slate-100 dark:border-slate-700">
+                                <i class="fas fa-box-open text-3xl text-slate-300 dark:text-slate-600 mb-3"></i>
+                                <p class="text-sm text-slate-500 dark:text-slate-400 font-medium">Momentan nu are niciun obiectiv setat.</p>
+                            </div>
+                        ` : partnerGoals.map(g => generateGoalCard(g, false, partnerAccent)).join('')}
+                    </div>
                 </div>
             `;
         };
