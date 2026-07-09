@@ -624,24 +624,21 @@
     .edit-goal-hint { font-size: 11px; color: var(--muted); line-height: 1.4; margin-top: 4px; }
 
 
-    .family-code-card { margin-top: 12px; }
-    .family-code-note { font-size: 11px; color: var(--muted); line-height: 1.45; margin-top: 8px; }
-    .profile-actions {
-      position: sticky;
-      bottom: 10px;
-      z-index: 25;
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 9px;
-      padding: 10px;
-      margin-top: 18px;
-      border-radius: 24px;
-      background: rgba(255,255,255,.92);
-      border: 1px solid rgba(15,23,42,.08);
-      box-shadow: 0 20px 42px rgba(15,23,42,.12), inset 0 1px 0 rgba(255,255,255,.9);
-      backdrop-filter: blur(16px);
+    .family-code-card {
+      margin-top: 12px;
+      padding: 12px;
+      border-radius: 18px;
     }
-    body.dark-mode .profile-actions { background: rgba(15,23,42,.92); border-color: rgba(255,255,255,.10); }
+    .family-code-row { display:grid; grid-template-columns: minmax(0, 1fr) auto; gap:8px; align-items:end; }
+    .family-code-card .input { padding: 11px 12px; border-radius: 14px; font-size: 13px; }
+    .family-code-card .btn { padding: 11px 13px; border-radius: 14px; white-space: nowrap; }
+    .family-code-note { font-size: 10.5px; color: var(--muted); line-height: 1.35; margin-top: 7px; }
+    .family-save-status { min-height: 18px; margin-top: 6px; font-size: 12px; color: var(--success); font-weight: 500; }
+    .profile-header { position: relative; }
+    .profile-menu-btn { position:absolute; top:0; right:0; }
+    .about-card h3 { font-size: 14px; font-weight: 500; margin: 0 0 5px; color: var(--text); }
+    .about-card p { font-size: 12px; color: var(--muted); line-height: 1.45; margin: 0; }
+    .profile-menu-action { display:flex; align-items:center; justify-content:center; gap:8px; }
     .btn-delete-account { background: rgba(239,68,68,.12); color: #dc2626; border: 1px solid rgba(239,68,68,.22); }
     body.dark-mode .btn-delete-account { color:#fca5a5; background: rgba(239,68,68,.16); border-color: rgba(239,68,68,.24); }
 
@@ -678,6 +675,7 @@
     let completedNotified = new Set();
     let dataLoadedOnce = false;
     let familyCode = '';
+    const DEFAULT_FAMILY_CODE = '0706';
     window.selectedSignupRole = 'sot';
 
     const app = document.getElementById('app');
@@ -693,7 +691,8 @@
       moon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M20 14.4A7.7 7.7 0 0 1 9.6 4a8 8 0 1 0 10.4 10.4Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>',
       camera: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M7 7h2l1.5-2h3L15 7h2a3 3 0 0 1 3 3v7a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3v-7a3 3 0 0 1 3-3Z" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="13.5" r="3" stroke="currentColor" stroke-width="1.8"/></svg>',
       logOut: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M10 6H6a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h4M14 8l4 4-4 4M18 12H9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
-      trash: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M9 4h6M4 7h16M10 11v6M14 11v6M6 7l1 13a1 1 0 0 0 1 .9h8a1 1 0 0 0 1-.9l1-13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+      trash: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M9 4h6M4 7h16M10 11v6M14 11v6M6 7l1 13a1 1 0 0 0 1 .9h8a1 1 0 0 0 1-.9l1-13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+      more: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="6" r="1.4" fill="currentColor"/><circle cx="12" cy="12" r="1.4" fill="currentColor"/><circle cx="12" cy="18" r="1.4" fill="currentColor"/></svg>'
     };
 
     const money = (v) => Number(v || 0).toLocaleString('ro-RO', { maximumFractionDigits: 2 });
@@ -761,7 +760,7 @@
         const res = await supabase.from('profiles').select('id,email,role,family_code').eq('id', currentUser.id).maybeSingle();
         existing = res.data || null;
       } catch (_) {}
-      familyCode = normalizeFamilyCode(pendingCode || storedCode || existing?.family_code || currentUser.user_metadata?.family_code || currentUser.id.replace(/-/g,'').slice(0,8));
+      familyCode = normalizeFamilyCode(pendingCode || storedCode || existing?.family_code || currentUser.user_metadata?.family_code || DEFAULT_FAMILY_CODE);
       localStorage.setItem(userFamilyStorageKey(), familyCode);
       sessionStorage.removeItem('pendingFamilyCode');
       await supabase.from('profiles').upsert({ id: currentUser.id, email: currentUser.email, role: existing?.role || role, family_code: familyCode }, { onConflict: 'id' });
@@ -877,7 +876,7 @@
             ${roleSelect}
             <div><p class="label">Email</p><input id="emailInput" class="input" type="email" autocomplete="email" placeholder="tu@familie.ro"></div>
             <div><p class="label">Parolă</p><input id="passInput" class="input" type="password" autocomplete="${isLogin ? 'current-password' : 'new-password'}" placeholder="••••••••"></div>
-            <div><p class="label">Cod familie</p><input id="familyCodeInput" class="input" type="text" autocomplete="off" placeholder="ex. IONUT-GABRIELA" style="text-transform:uppercase; letter-spacing:.04em;" oninput="this.value=this.value.toLocaleUpperCase('ro-RO').replace(/[^A-Z0-9ĂÂÎȘŞȚŢ_-]/g,'')"></div>
+            <div><p class="label">Cod familie</p><input id="familyCodeInput" class="input" type="text" autocomplete="off" value="0706" placeholder="0706" style="text-transform:uppercase; letter-spacing:.04em;" oninput="this.value=this.value.toLocaleUpperCase('ro-RO').replace(/[^A-Z0-9ĂÂÎȘŞȚŢ_-]/g,'')"></div>
             <label class="flex items-center gap-3 text-sm muted px-1">
               <input id="keepLoggedInput" type="checkbox" checked style="accent-color:#d6b15d; width:18px; height:18px;">
               Ține-mă conectat
@@ -1080,7 +1079,8 @@
     function profileHTML() {
       const role = getRole(currentUser.email);
       return `
-        <div class="text-center mb-5">
+        <div class="profile-header text-center mb-5">
+          <button class="icon-btn profile-menu-btn" onclick="window.appActions.openProfileMenu()" aria-label="Meniu profil">${svg.more}</button>
           <div class="mx-auto mb-3" style="width:max-content">
             <label style="position:relative; display:block; cursor:pointer;">
               ${avatarHTML(currentUser.email, true)}
@@ -1095,19 +1095,23 @@
           <div class="flex items-center gap-3"><span class="icon-btn">${svg.moon}</span><span class="text-sm">Mod întunecat</span></div>
           <button class="theme-switch" onclick="window.appActions.toggleTheme()" aria-label="Schimbă tema"><span></span></button>
         </div>
-        <div class="card mb-3"><p class="text-sm muted">Datele se salvează pe contul vostru și se sincronizează între telefoane prin Supabase.</p></div>
+        <div class="card about-card mb-3">
+          <h3>Despre aplicație</h3>
+          <p>Aplicația vă ajută să urmăriți obiectivele personale și comune, banii puși sau primiți, istoricul pe zile, statisticile și calculele salvate. Datele sunt sincronizate între telefoanele voastre.</p>
+        </div>
         <div class="card family-code-card mb-3">
-          <p class="label">Cod familie</p>
-          <input id="familyCodeSettingsInput" class="input" value="${escapeHTML(familyCode)}" style="text-transform:uppercase; letter-spacing:.04em;" oninput="this.value=this.value.toLocaleUpperCase('ro-RO').replace(/[^A-Z0-9ĂÂÎȘŞȚŢ_-]/g,'')">
-          <p class="family-code-note">Pentru ca două conturi să vadă aceleași obiective, pune același cod pe ambele conturi. Alt cont nu mai vede mișcările voastre.</p>
-          <button class="btn btn-soft btn-full mt-3" onclick="window.appActions.saveFamilyCode()">Salvează codul</button>
+          <div class="family-code-row">
+            <div>
+              <p class="label">Cod familie</p>
+              <input id="familyCodeSettingsInput" class="input" value="${escapeHTML(familyCode || DEFAULT_FAMILY_CODE)}" style="text-transform:uppercase; letter-spacing:.04em;" oninput="this.value=this.value.toLocaleUpperCase('ro-RO').replace(/[^A-Z0-9ĂÂÎȘŞȚŢ_-]/g,'')">
+            </div>
+            <button class="btn btn-soft" onclick="window.appActions.saveFamilyCode()">Salvează</button>
+          </div>
+          <div id="familyCodeSavedStatus" class="family-save-status"></div>
+          <p class="family-code-note">Codul vostru: 0706. Ambele conturi trebuie să aibă același cod.</p>
         </div>
         ${profileGoalSections(currentUser.email, true)}
-        ${commonGoalSections()}
-        <div class="profile-actions">
-          <button class="btn btn-danger btn-full flex items-center justify-center gap-2" onclick="window.appActions.logout()">${svg.logOut} Deconectare</button>
-          <button class="btn btn-delete-account btn-full flex items-center justify-center gap-2" onclick="window.appActions.openDeleteAccount()">${svg.trash} Șterge Cont</button>
-        </div>`;
+        ${commonGoalSections()}`;
     }
 
     function calculatorHTML() {
@@ -1182,7 +1186,7 @@
         const email = document.getElementById('emailInput').value.trim();
         const password = document.getElementById('passInput').value;
         const keep = document.getElementById('keepLoggedInput')?.checked !== false;
-        const inputFamilyCode = normalizeFamilyCode(document.getElementById('familyCodeInput')?.value || '');
+        const inputFamilyCode = normalizeFamilyCode(document.getElementById('familyCodeInput')?.value || DEFAULT_FAMILY_CODE);
         const btn = document.getElementById('authBtn');
         if (!email || !password) return alert('Completează emailul și parola.');
         btn.textContent = 'Se procesează...'; btn.disabled = true;
@@ -1393,7 +1397,7 @@
       },
 
       async saveFamilyCode() {
-        const newCode = normalizeFamilyCode(document.getElementById('familyCodeSettingsInput')?.value || '');
+        const newCode = normalizeFamilyCode(document.getElementById('familyCodeSettingsInput')?.value || DEFAULT_FAMILY_CODE);
         if (!newCode) return alert('Scrie un cod familie.');
         const oldCode = familyCode;
         familyCode = newCode;
@@ -1412,12 +1416,19 @@
           dataLoadedOnce = false;
           completedNotified = new Set();
           await fetchData({ soft: true });
-          alert('Codul familie a fost salvat. Pune același cod și pe contul partenerei/partenerului.');
+          const saved = document.getElementById('familyCodeSavedStatus');
+          if (saved) {
+            saved.textContent = 'Salvat';
+            setTimeout(() => { if (saved) saved.textContent = ''; }, 2200);
+          }
         } catch (error) {
           familyCode = oldCode;
           localStorage.setItem(userFamilyStorageKey(), familyCode);
           alert('Eroare la cod familie: ' + (error.message || error));
         }
+      },
+      openProfileMenu() {
+        modal.innerHTML = `<div class="modal-backdrop"><div class="sheet"><div class="grab"></div><h3 class="text-xl font-medium mb-1">Profil</h3><p class="text-sm muted mb-4">Alege ce vrei să faci cu contul tău.</p><div class="space-y-2"><button class="btn btn-danger btn-full profile-menu-action" onclick="window.appActions.logout()">${svg.logOut} Deconectare</button><button class="btn btn-delete-account btn-full profile-menu-action" onclick="window.appActions.openDeleteAccount()">${svg.trash} Șterge Cont</button><button class="btn btn-soft btn-full" onclick="window.appActions.closeModal()">Închide</button></div></div></div>`;
       },
       openDeleteAccount() {
         modal.innerHTML = `<div class="modal-backdrop"><div class="sheet"><div class="grab"></div><h3 class="text-xl font-medium mb-1">Șterge cont</h3><p class="text-sm muted mb-4">Asta șterge contul tău, obiectivele tale, calculele tale și datele tale din aplicație. Acțiunea nu se poate anula.</p><div class="grid grid-cols-2 gap-2"><button class="btn btn-soft btn-full" onclick="window.appActions.closeModal()">Anulează</button><button class="btn btn-delete-account btn-full" onclick="window.appActions.deleteAccount()">Șterge Cont</button></div></div></div>`;
