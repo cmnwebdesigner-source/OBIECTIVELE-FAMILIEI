@@ -904,6 +904,13 @@
     body.dark-mode .milestone-chip.done { color:#86efac; background:rgba(22,163,74,.15); border-color:rgba(134,239,172,.16); }
     body.dark-mode .milestone-chip.next { color:#93c5fd; background:rgba(37,99,235,.17); border-color:rgba(147,197,253,.16); }
 
+    .summary-tile { text-align:left; appearance:none; -webkit-appearance:none; cursor:pointer; }
+    .summary-tile:active { transform:scale(.985); }
+    .month-history-header { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:14px; }
+    .money-month-nav { width:40px; height:40px; border-radius:16px; display:flex; align-items:center; justify-content:center; background:var(--card); border:1px solid var(--border); color:var(--text); box-shadow:var(--shadow-sm); }
+    .money-month-card { padding:16px; border-radius:24px; background:linear-gradient(135deg, rgba(255,255,255,.98), rgba(248,250,252,.92)); border:1px solid var(--border); box-shadow:var(--shadow); }
+    body.dark-mode .money-month-card { background:rgba(15,23,42,.86); border-color:rgba(255,255,255,.10); }
+
   </style>
 </head>
 <body>
@@ -944,6 +951,8 @@
     let selectedGoalListKind = '';
     let selectedGoalListEmail = '';
     let selectedPartnerProfileEmail = '';
+    let selectedMoneyHistoryType = 'offered';
+    let selectedMoneyHistoryMonth = '';
     const DEFAULT_FAMILY_CODE = '280706';
     const PIN_USERS = {
       '2807': { id: '11111111-1111-4111-8111-111111111111', email: 'ionut7628c@gmail.com', role: 'sot', label: 'Soț' },
@@ -1154,6 +1163,7 @@
       else if (currentPage === 'calculator') { content = calculatorHTML(); nav = false; }
       else if (currentPage === 'calendar') { content = calendarPageHTML(); nav = false; }
       else if (currentPage === 'piggy') { content = piggyPageHTML(); nav = false; }
+      else if (currentPage === 'moneyHistory') { content = moneyHistoryPageHTML(); nav = false; }
       else if (currentPage === 'goalStats') { content = statsHTML(); nav = false; }
       else if (currentPage === 'goalList') { content = goalListPageHTML(); nav = false; }
       else content = homeHTML();
@@ -1198,8 +1208,9 @@
       const commonGoals = goals.filter(g => isCommonGoal(g) && goalBelongsToFamily(g) && showCompletedOnHome(g));
       const otherGoals = goals.filter(g => !isCommonGoal(g) && g.owner !== currentUser.email && goalBelongsToFamily(g) && showCompletedOnHome(g));
       const todayTransactions = visibleTransactions().filter(t => transactionBelongsToFamily(t) && String(t.date).slice(0,10) === todayISO()).slice(0,3);
-      const offered = transactions.filter(t => transactionBelongsToFamily(t) && t.from_role === currentUser.email && t.to_role !== currentUser.email).reduce((s,t) => s + Math.max(0, Number(t.amount || 0)), 0);
-      const received = transactions.filter(t => transactionBelongsToFamily(t) && t.to_role === currentUser.email && t.from_role !== currentUser.email).reduce((s,t) => s + Math.max(0, Number(t.amount || 0)), 0);
+      const currentMoneyMonth = firstOfMonth(todayISO());
+      const offered = moneyMovementsForMonth('offered', currentMoneyMonth).reduce((s,t) => s + Math.max(0, Number(t.amount || 0)), 0);
+      const received = moneyMovementsForMonth('received', currentMoneyMonth).reduce((s,t) => s + Math.max(0, Number(t.amount || 0)), 0);
       const partnerLabel = myRole === 'sot' ? 'Soției' : 'Soțului';
       const visiblePartnerEmail = otherGoals[0]?.owner || partnerEmail() || '';
       const piggy = piggyBalance();
@@ -1222,14 +1233,14 @@
 
         <div class="summary-hero compact-money">
           <div class="summary-grid">
-            <div class="summary-tile offered">
+            <button class="summary-tile offered" onclick="window.appActions.openMoneyHistory('offered')">
               <p class="summary-label">Ai oferit</p>
               <p class="summary-value">${money(offered)} <span class="text-xs">RON</span></p>
-            </div>
-            <div class="summary-tile received">
+            </button>
+            <button class="summary-tile received" onclick="window.appActions.openMoneyHistory('received')">
               <p class="summary-label">Ai primit</p>
               <p class="summary-value">${money(received)} <span class="text-xs">RON</span></p>
-            </div>
+            </button>
           </div>
         </div>
 
@@ -1585,6 +1596,77 @@
         <div class="section"><div class="section-head"><span>Pe zile</span>${list.length ? `<button class="clear-history-btn" onclick="window.appActions.clearGoalHistory('${goal.id}')">Șterge istoric</button>` : ``}</div><div class="space-y-3">${dates.length ? dates.map(d => `<div class="card"><div class="flex justify-between mb-2"><span class="text-sm capitalize">${formatFullDate(d)}</span><span class="text-sm muted">${byDate[d].length}</span></div><div class="space-y-2">${byDate[d].map(transactionRow).join('')}</div></div>`).join('') : emptyHTML('Nu există încă statistici.')}</div></div>`;
     }
 
+
+    function transactionMonthKey(t) {
+      return String(t?.date || t?.timestamp || '').slice(0, 7);
+    }
+
+    function monthKeyFromDate(dateStr) {
+      return String(firstOfMonth(dateStr || todayISO())).slice(0, 7);
+    }
+
+    function moneyMovementsForMonth(type, monthDate) {
+      const key = monthKeyFromDate(monthDate || todayISO());
+      return visibleTransactions()
+        .filter(t => transactionBelongsToFamily(t))
+        .filter(t => !isPiggyTransaction(t))
+        .filter(t => Number(t.amount || 0) > 0)
+        .filter(t => transactionMonthKey(t) === key)
+        .filter(t => type === 'offered'
+          ? (t.from_role === currentUser.email && t.to_role !== currentUser.email)
+          : (t.to_role === currentUser.email && t.from_role !== currentUser.email)
+        )
+        .sort((a, b) => String(b.timestamp || '').localeCompare(String(a.timestamp || '')));
+    }
+
+    function moneyMovementRow(t, type) {
+      const dt = t.timestamp ? new Date(t.timestamp) : new Date(String(t.date || todayISO()) + 'T12:00:00');
+      const dateText = dt.toLocaleDateString('ro-RO', { day:'2-digit', month:'short', year:'numeric' });
+      const timeText = dt.toLocaleTimeString('ro-RO', { hour:'2-digit', minute:'2-digit' });
+      const person = type === 'offered' ? ownerLabel(t.to_role) : ownerLabel(t.from_role);
+      const label = type === 'offered' ? 'Către' : 'De la';
+      return `<div class="card" style="padding:12px 13px">
+        <div class="flex items-start justify-between gap-3">
+          <div class="min-w-0">
+            <p class="text-xs muted">${label} <span style="color:var(--text)">${escapeHTML(person)}</span></p>
+            <p class="text-sm mt-1" style="color:var(--text); white-space:normal; word-break:break-word;">${escapeHTML(String(t.goal_title || '').toUpperCase())}</p>
+            <p class="text-[11px] muted mt-1">${dateText} · ${timeText}</p>
+          </div>
+          <p class="text-sm" style="color:${type === 'offered' ? 'var(--danger)' : 'var(--success)'}; white-space:nowrap;">+${money(t.amount)} RON</p>
+        </div>
+      </div>`;
+    }
+
+    function moneyHistoryPageHTML() {
+      const type = selectedMoneyHistoryType === 'received' ? 'received' : 'offered';
+      const month = selectedMoneyHistoryMonth || firstOfMonth(todayISO());
+      const list = moneyMovementsForMonth(type, month);
+      const total = list.reduce((s, t) => s + Number(t.amount || 0), 0);
+      const title = type === 'offered' ? 'Ai oferit' : 'Ai primit';
+      const tone = type === 'offered' ? 'var(--danger)' : 'var(--success)';
+      return `${backButton()}
+        <div class="money-month-card mb-4">
+          <p class="muted text-xs">Istoric lunar</p>
+          <h2 class="text-2xl font-medium tracking-[-.03em] mt-1">${title}</h2>
+          <div class="month-history-header mt-4">
+            <button class="money-month-nav" onclick="window.appActions.shiftMoneyHistoryMonth(-1)">${svg.back}</button>
+            <div class="text-center min-w-0">
+              <p class="text-sm capitalize" style="color:var(--text)">${formatMonthTitle(month)}</p>
+              <p class="text-[11px] muted">${list.length} mișcări salvate</p>
+            </div>
+            <button class="money-month-nav" onclick="window.appActions.shiftMoneyHistoryMonth(1)" style="transform:rotate(180deg)">${svg.back}</button>
+          </div>
+          <div class="summary-tile ${type === 'offered' ? 'offered' : 'received'}" style="margin-top:6px; pointer-events:none;">
+            <p class="summary-label">Total luna asta</p>
+            <p class="summary-value" style="color:${tone}">${money(total)} <span class="text-xs">RON</span></p>
+          </div>
+        </div>
+        <div class="section">
+          <div class="section-head"><span>${title}</span><small class="capitalize">${formatMonthTitle(month)}</small></div>
+          <div class="space-y-2">${list.length ? list.map(t => moneyMovementRow(t, type)).join('') : emptyHTML('Nu există mișcări în luna asta.')}</div>
+        </div>`;
+    }
+
     function transactionRow(t) {
       const amount = Number(t.amount || 0);
       const color = amount < 0 ? 'var(--danger)' : 'var(--success)';
@@ -1718,6 +1800,8 @@
       openCalculator() { previousPage = currentPage; currentPage = 'calculator'; renderApp(); },
       openCalendar() { previousPage = currentPage; currentPage = 'calendar'; renderApp(); },
       openPiggy() { previousPage = currentPage; currentPage = 'piggy'; renderApp(); },
+      openMoneyHistory(type) { selectedMoneyHistoryType = type === 'received' ? 'received' : 'offered'; selectedMoneyHistoryMonth = firstOfMonth(todayISO()); previousPage = currentPage; currentPage = 'moneyHistory'; renderApp(); },
+      shiftMoneyHistoryMonth(months) { selectedMoneyHistoryMonth = shiftMonth(selectedMoneyHistoryMonth || firstOfMonth(todayISO()), months); renderApp(); },
       openPartnerProfile(encodedEmail = '') {
         const decoded = encodedEmail ? decodeURIComponent(encodedEmail) : '';
         selectedPartnerProfileEmail = decoded && decoded !== currentUser?.email ? decoded : (partnerEmail() || '');
