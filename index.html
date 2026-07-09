@@ -75,7 +75,8 @@
       padding: 18px 16px 92px;
       overflow-y: auto;
       scrollbar-width: none;
-      animation: fade .18s ease-out;
+      animation: none;
+      overscroll-behavior: contain;
     }
     .screen::-webkit-scrollbar { display:none; }
 
@@ -735,12 +736,59 @@
 
 
     /* PATCH: pușculiță modernă */
+    .top-feature-row {
+      display:flex;
+      align-items:center;
+      gap:10px;
+      min-width:0;
+      flex:1;
+      overflow:hidden;
+    }
     .top-piggy {
       display:flex;
       align-items:center;
       gap:10px;
       min-width:0;
-      max-width: 210px;
+      max-width: 168px;
+      flex-shrink:1;
+    }
+    .top-game-btn {
+      width:46px;
+      height:46px;
+      border-radius:18px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      color:#0f172a;
+      background:linear-gradient(145deg, rgba(255,255,255,.98), rgba(226,232,240,.92));
+      border:1px solid rgba(15,23,42,.08);
+      box-shadow:0 12px 24px rgba(15,23,42,.08), inset 0 1px 0 rgba(255,255,255,.92);
+      flex-shrink:0;
+      transition:transform .14s ease, box-shadow .14s ease;
+    }
+    .top-game-btn:active { transform:scale(.94); box-shadow:0 8px 18px rgba(15,23,42,.10); }
+    .games-card {
+      border-radius:30px;
+      padding:22px;
+      background:
+        radial-gradient(circle at 20% 0%, rgba(59,130,246,.14), transparent 36%),
+        radial-gradient(circle at 100% 10%, rgba(239,68,68,.12), transparent 34%),
+        linear-gradient(145deg, rgba(255,255,255,.97), rgba(248,250,252,.90));
+      border:1px solid rgba(15,23,42,.08);
+      box-shadow:0 18px 44px rgba(15,23,42,.09), inset 0 1px 0 rgba(255,255,255,.94);
+    }
+    .games-icon-large {
+      width:78px;
+      height:78px;
+      border-radius:28px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      margin:0 auto 16px;
+      color:#0f172a;
+      background:linear-gradient(145deg,#fff,#e2e8f0);
+      border:1px solid rgba(15,23,42,.08);
+      box-shadow:0 16px 30px rgba(15,23,42,.10), inset 0 1px 0 rgba(255,255,255,.9);
     }
     .piggy-icon-box {
       width:46px;
@@ -889,6 +937,7 @@
       100% { opacity: 0; transform: translate(calc(-50% + var(--coin-x)), calc(-50% + var(--coin-y))) scale(.28) rotate(430deg); }
     }
 
+    body.dark-mode .top-game-btn, body.dark-mode .games-icon-large, body.dark-mode .games-card,
     body.dark-mode .piggy-icon-box,    body.dark-mode .piggy-card,
     body.dark-mode .coin-btn {
       background:rgba(15,23,42,.86);
@@ -976,7 +1025,8 @@
       logOut: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M10 6H6a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h4M14 8l4 4-4 4M18 12H9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
       trash: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M9 4h6M4 7h16M10 11v6M14 11v6M6 7l1 13a1 1 0 0 0 1 .9h8a1 1 0 0 0 1-.9l1-13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
       more: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="6" r="1.4" fill="currentColor"/><circle cx="12" cy="12" r="1.4" fill="currentColor"/><circle cx="12" cy="18" r="1.4" fill="currentColor"/></svg>',
-      pig: '<svg width="23" height="23" viewBox="0 0 24 24" fill="none"><path d="M6.7 10.2C7.9 7.9 10.4 6.5 13.6 6.5h1.7c2.8 0 5.1 2.1 5.1 4.9 0 2.2-1.4 4.1-3.4 4.7l-.5 2.2h-2.2l-.4-1.7h-4.4l-.4 1.7H6.9l-.6-2.4A4.6 4.6 0 0 1 4.2 13H3.1a1.1 1.1 0 0 1 0-2.2h1.2c.4 0 .8-.2 1-.6l1.4-2.1h2.1" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M15.8 6.7c.4-1.4 1.5-2.4 3-2.7.4 1.5-.1 2.8-1.4 3.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><circle cx="16.8" cy="10.8" r=".7" fill="currentColor"/></svg>'
+      pig: '<svg width="23" height="23" viewBox="0 0 24 24" fill="none"><path d="M6.7 10.2C7.9 7.9 10.4 6.5 13.6 6.5h1.7c2.8 0 5.1 2.1 5.1 4.9 0 2.2-1.4 4.1-3.4 4.7l-.5 2.2h-2.2l-.4-1.7h-4.4l-.4 1.7H6.9l-.6-2.4A4.6 4.6 0 0 1 4.2 13H3.1a1.1 1.1 0 0 1 0-2.2h1.2c.4 0 .8-.2 1-.6l1.4-2.1h2.1" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M15.8 6.7c.4-1.4 1.5-2.4 3-2.7.4 1.5-.1 2.8-1.4 3.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><circle cx="16.8" cy="10.8" r=".7" fill="currentColor"/></svg>',
+      gamepad: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M8.3 9.5h7.4c2.7 0 4.5 1.7 4.8 4.4l.3 2.9c.2 1.8-1.7 3-3.1 1.9l-2.1-1.7H8.4l-2.1 1.7c-1.4 1.1-3.3-.1-3.1-1.9l.3-2.9c.3-2.7 2.1-4.4 4.8-4.4Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 13.5h3M9.5 12v3M15.5 13.2h.01M18 14.6h.01" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M9.5 9.5V7.8c0-.9.7-1.6 1.6-1.6h1.8c.9 0 1.6.7 1.6 1.6v1.7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>'
     };
 
     const money = (v) => Number(v || 0).toLocaleString('ro-RO', { maximumFractionDigits: 2 });
@@ -1144,10 +1194,13 @@
     function scheduleSoftRefresh() {
       clearTimeout(refreshTimer);
       if (Date.now() < suppressSoftUntil) {
-        refreshTimer = setTimeout(() => fetchData({ render: false }), Math.max(450, suppressSoftUntil - Date.now()));
+        refreshTimer = setTimeout(() => fetchData({ render: false }), Math.max(500, suppressSoftUntil - Date.now()));
         return;
       }
-      refreshTimer = setTimeout(() => fetchData({ soft: true }), 650);
+      refreshTimer = setTimeout(() => {
+        const quietPages = currentPage === 'home' || currentPage === 'moneyHistory';
+        fetchData({ soft: !quietPages ? true : false, render: !quietPages ? true : false });
+      }, 700);
     }
 
     function renderApp(soft = false) {
@@ -1163,14 +1216,16 @@
       else if (currentPage === 'calculator') { content = calculatorHTML(); nav = false; }
       else if (currentPage === 'calendar') { content = calendarPageHTML(); nav = false; }
       else if (currentPage === 'piggy') { content = piggyPageHTML(); nav = false; }
+      else if (currentPage === 'games') { content = gamesPageHTML(); nav = false; }
       else if (currentPage === 'moneyHistory') { content = moneyHistoryPageHTML(); nav = false; }
       else if (currentPage === 'goalStats') { content = statsHTML(); nav = false; }
       else if (currentPage === 'goalList') { content = goalListPageHTML(); nav = false; }
       else content = homeHTML();
       app.innerHTML = `<div class="screen ${nav ? '' : 'no-nav'} ${soft ? 'soft-render' : ''}">${content}</div>${nav ? bottomNavHTML() : ''}`;
-      if (soft) {
-        const s = app.querySelector('.screen');
-        if (s) s.scrollTop = scrollTop;
+      const restored = app.querySelector('.screen');
+      if (restored && (soft || currentPage === 'home' || currentPage === 'moneyHistory')) {
+        restored.style.scrollBehavior = 'auto';
+        restored.scrollTop = scrollTop;
         requestAnimationFrame(() => { const again = app.querySelector('.screen'); if (again) again.scrollTop = scrollTop; });
       }
     }
@@ -1216,14 +1271,17 @@
       const piggy = piggyBalance();
       const pig = piggyInfo(piggy);
       return `
-        <div class="flex items-center justify-between mb-5">
-          <button class="top-piggy" onclick="window.appActions.openPiggy()" aria-label="Deschide pușculița">
-            <div class="piggy-icon-box">${svg.pig}</div>
-            <div class="min-w-0">
-              <p class="piggy-head-label">Pușculiță</p>
-              <p class="piggy-head-value">${money(piggy)} RON</p>
-            </div>
-          </button>
+        <div class="flex items-center justify-between mb-5 gap-3">
+          <div class="top-feature-row">
+            <button class="top-piggy" onclick="window.appActions.openPiggy()" aria-label="Deschide pușculița">
+              <div class="piggy-icon-box">${svg.pig}</div>
+              <div class="min-w-0">
+                <p class="piggy-head-label">Pușculiță</p>
+                <p class="piggy-head-value">${money(piggy)} RON</p>
+              </div>
+            </button>
+            <button class="top-game-btn" onclick="window.appActions.openGames()" aria-label="Jocuri">${svg.gamepad}</button>
+          </div>
           <div class="quick-actions">
             <button class="icon-btn" onclick="window.appActions.openCalendar()" aria-label="Calendar">${svg.calendar}</button>
             <button class="icon-btn" onclick="window.appActions.openCalculator()" aria-label="Calculator">${svg.calc}</button>
@@ -1637,6 +1695,20 @@
       </div>`;
     }
 
+    function gamesPageHTML() {
+      return `${backButton()}
+        <div class="games-card text-center mb-4">
+          <div class="games-icon-large">${svg.gamepad}</div>
+          <p class="muted text-xs">Spațiu pregătit</p>
+          <h2 class="text-2xl font-medium tracking-[-.03em] mt-1">Jocuri</h2>
+          <p class="text-sm muted mt-3 leading-relaxed">Aici va apărea zona de jocuri pentru voi. Momentan nu am adăugat niciun joc, ca să rămână aplicația stabilă și curată.</p>
+        </div>
+        <div class="section">
+          <div class="section-head"><span>În curând</span><small>0 jocuri</small></div>
+          ${emptyHTML('Nu există jocuri adăugate momentan.')}
+        </div>`;
+    }
+
     function moneyHistoryPageHTML() {
       const type = selectedMoneyHistoryType === 'received' ? 'received' : 'offered';
       const month = selectedMoneyHistoryMonth || firstOfMonth(todayISO());
@@ -1800,6 +1872,7 @@
       openCalculator() { previousPage = currentPage; currentPage = 'calculator'; renderApp(); },
       openCalendar() { previousPage = currentPage; currentPage = 'calendar'; renderApp(); },
       openPiggy() { previousPage = currentPage; currentPage = 'piggy'; renderApp(); },
+      openGames() { previousPage = currentPage; currentPage = 'games'; renderApp(); },
       openMoneyHistory(type) { selectedMoneyHistoryType = type === 'received' ? 'received' : 'offered'; selectedMoneyHistoryMonth = firstOfMonth(todayISO()); previousPage = currentPage; currentPage = 'moneyHistory'; renderApp(); },
       shiftMoneyHistoryMonth(months) { selectedMoneyHistoryMonth = shiftMonth(selectedMoneyHistoryMonth || firstOfMonth(todayISO()), months); renderApp(); },
       openPartnerProfile(encodedEmail = '') {
@@ -1987,8 +2060,7 @@
           const tr = await supabase.from('transactions').insert([{ goal_id:id, goal_title:String(g.title || '').toUpperCase(), amount:actualDelta, from_role:currentUser.email, to_role:g.owner, date:todayISO(), timestamp:new Date().toISOString(), family_code: familyCode }]).select('*').maybeSingle();
           if (tr.error) throw tr.error;
           if (tr.data) transactions = transactions.map(t => t.id === localTransaction.id ? tr.data : t);
-          suppressSoftUntil = Date.now() + 1300;
-          renderApp(true);
+          suppressSoftUntil = Date.now() + 1600;
           if (old < target && finalAmount >= target) markGoalCompleted(g);
           scheduleSoftRefresh();
         } catch (error) {
@@ -2045,8 +2117,7 @@
 
           if (tr.error) throw tr.error;
           if (tr.data) transactions = transactions.map(t => t.id === localId ? tr.data : t);
-          suppressSoftUntil = Date.now() + 1200;
-          renderApp(true);
+          suppressSoftUntil = Date.now() + 1600;
           scheduleSoftRefresh();
         }).catch((error) => {
           transactions = transactions.filter(t => t.id !== localId);
@@ -2092,8 +2163,7 @@
           }]).select('*').maybeSingle();
           if (tr.error) throw tr.error;
           if (tr.data) transactions = transactions.map(t => t.id === localTransaction.id ? tr.data : t);
-          suppressSoftUntil = Date.now() + 1300;
-          renderApp(true);
+          suppressSoftUntil = Date.now() + 1600;
           scheduleSoftRefresh();
         } catch (error) {
           transactions = transactions.filter(t => t.id !== localTransaction.id);
