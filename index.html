@@ -904,8 +904,11 @@
     .piggy-target-note { font-size:12px; color:var(--muted); margin-top:6px; line-height:1.35; }
     .piggy-progress-big { height:12px; border-radius:999px; background:rgba(15,23,42,.07); overflow:hidden; margin:16px 0 12px; }
     .piggy-progress-big span { display:block; height:100%; border-radius:inherit; background:linear-gradient(90deg,#2563eb,#22c55e,#eab308); transition:width .22s ease; }
-    .piggy-coin-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin-top:14px; }
+    .piggy-coin-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; margin-top:14px; }
     .piggy-coin-grid .coin-btn { min-height:58px; border-radius:20px; flex-direction:column; gap:5px; font-size:12px; }
+    .top-piggy .piggy-icon-box, .top-game-btn { box-shadow:none !important; }
+    .top-piggy, .top-game-btn { box-shadow:none !important; }
+
     .piggy-break-btn { margin-top:12px; width:100%; border-radius:20px; min-height:52px; display:flex; align-items:center; justify-content:center; gap:8px; font-weight:500; color:#fff; background:linear-gradient(135deg,#ef4444,#f97316); box-shadow:0 14px 28px rgba(239,68,68,.22); }
     .piggy-break-btn:disabled { opacity:.45; filter:grayscale(1); box-shadow:none; }
     .piggy-history-row { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px; border-radius:18px; background:var(--card); border:1px solid rgba(15,23,42,.07); }
@@ -935,6 +938,14 @@
       --coin-x: 0px;
       --coin-y: -120px;
     }
+
+    .piggy-flying-coin.plain-coin {
+      background: radial-gradient(circle at 34% 26%, #fff7c2 0 13%, #fde047 28%, #f59e0b 70%, #b45309 100%);
+      color: transparent;
+      font-size:0;
+      border:1px solid rgba(146,64,14,.16);
+    }
+
     @keyframes piggyCoinFly {
       0% { opacity: 0; transform: translate(-50%, -50%) scale(.65) rotate(-18deg); }
       14% { opacity: 1; transform: translate(-50%, -50%) scale(1.05) rotate(8deg); }
@@ -1115,6 +1126,7 @@
     let suppressSoftUntil = 0;
     let calcExpression = '';
     let calcResult = '0';
+    let calcDraftNote = '';
     let swipeStartX = 0;
     let swipeMoved = false;
     let completedHold = {};
@@ -1635,6 +1647,7 @@ function piggyPageHTML() {
           <div class="milestone-row mb-3">${milestones}</div>
           <div class="piggy-coin-grid">
             <button type="button" class="coin-btn" onclick="window.appActions.addPiggyCoin(1, event)"><span class="coin-dot"></span>1 ban</button>
+            <button type="button" class="coin-btn" onclick="window.appActions.addPiggyCoin(5, event)"><span class="coin-dot"></span>5 bani</button>
             <button type="button" class="coin-btn" onclick="window.appActions.addPiggyCoin(10, event)"><span class="coin-dot"></span>10 bani</button>
             <button type="button" class="coin-btn" onclick="window.appActions.addPiggyCoin(50, event)"><span class="coin-dot"></span>50 bani</button>
           </div>
@@ -1643,11 +1656,6 @@ function piggyPageHTML() {
         <div class="section">
           <div class="section-head"><span>Pușculițe sparte</span>${breakHistory.length ? `<button class="clear-history-btn" onclick="window.appActions.clearPiggyHistory('break')">Șterge istoric</button>` : `<small>0</small>`}</div>
           <div class="space-y-2">${breakHistory.length ? breakHistory.map(piggyHistoryRow).join('') : emptyHTML('Nu ai spart încă pușculița.')}</div>
-        </div>
-        <div class="section">
-          <div class="section-head"><span>Istoric monede</span>${coinHistory.length ? `<button class="clear-history-btn" onclick="window.appActions.clearPiggyHistory('coin')">Șterge istoric</button>` : `<small>0</small>`}</div>
-          ${piggyMonthMiniCalendarHTML(selectedPiggyHistoryMonth || firstOfMonth(todayISO()), coinHistory)}
-          <div class="space-y-2">${piggyCoinMonthListHTML(selectedPiggyHistoryMonth || firstOfMonth(todayISO()), coinHistory)}</div>
         </div>`;
     }
 
@@ -1882,7 +1890,7 @@ function piggyPageHTML() {
         <div class="top-card mb-4"><p class="muted text-xs">Calculator</p><div class="text-[30px] min-h-[38px] font-medium break-all">${calcResult}</div><p class="muted text-sm break-all">${calcExpression || '0'}</p></div>
         <div class="calc-grid mb-4">${keys.map(k => `<button class="calc-key ${['÷','×','-','+'].includes(k) ? 'op' : k==='C' ? 'clear' : ''}" onclick="window.appActions.calcPress('${k}')">${k}</button>`).join('')}</div>
         <div class="grid grid-cols-2 gap-2 mb-4"><button class="btn btn-soft btn-full" onclick="window.appActions.calcBack()">Șterge</button><button class="btn btn-gold btn-full" onclick="window.appActions.calcEquals()">=</button></div>
-        <div class="card calc-save-card mb-4"><p class="label">Notiță scurtă</p><textarea id="calcNoteInput" class="input" rows="1" placeholder="Ex. cumpărături, datorie, obiectiv..."></textarea><button id="saveCalcBtn" class="btn btn-gold btn-full mt-2" onclick="window.appActions.saveCalc()">Salvează Calcul</button></div>
+        <div class="card calc-save-card mb-4"><p class="label">Notiță scurtă</p><textarea id="calcNoteInput" class="input" rows="1" placeholder="Ex. cumpărături, datorie, obiectiv..." oninput="window.appActions.updateCalcDraftNote(this.value)">${escapeHTML(calcDraftNote)}</textarea><button id="saveCalcBtn" class="btn btn-gold btn-full mt-2" onclick="window.appActions.saveCalc()">Salvează Calcul</button></div>
         <div class="section"><div class="section-head"><span>Calcule salvate</span>${calculatorHistory.length ? `<button class="clear-history-btn" onclick="window.appActions.clearCalculatorHistory()">Șterge istoric</button>` : `<small>0</small>`}</div><div id="calculatorHistoryList" class="space-y-2">${calculatorHistory.length ? calculatorHistory.map(c => `<div class="card"><p class="text-sm">${escapeHTML(c.expression)} = ${escapeHTML(c.result)}</p>${c.note ? `<p class="calc-note-inline"><b>Notiță:</b> ${escapeHTML(c.note)}</p>` : ''}</div>`).join('') : emptyHTML('Nu ai calcule salvate.')}</div></div>`;
     }
 
@@ -2088,8 +2096,7 @@ function piggyPageHTML() {
               <span class="text-[11px]" style="color:${item.done ? '#16a34a' : 'var(--muted)'}">${item.done ? 'Gata' : 'Deschide'}</span>
             </button>`).join('')}
           </div>
-        </div>
-        ${taskMonthHistoryHTML()}`;
+        </div>`;
     }
 
     function moneyHistoryPageHTML() {
@@ -2545,12 +2552,24 @@ function piggyPageHTML() {
     }
 
     function animatePiggyCoin(event, cents) {
-      // Doar efect de apăsare pe buton. Animația cu bănuțul zburător a fost scoasă.
       try {
         const btn = event?.currentTarget || event?.target?.closest?.('.coin-btn');
-        if (!btn) return;
-        btn.classList.add('pressed');
-        setTimeout(() => btn.classList.remove('pressed'), 190);
+        if (btn) {
+          btn.classList.add('pressed');
+          setTimeout(() => btn.classList.remove('pressed'), 190);
+        }
+        const pig = document.querySelector('.piggy-big-icon') || document.querySelector('.piggy-icon-box');
+        if (!btn || !pig) return;
+        const b = btn.getBoundingClientRect();
+        const p = pig.getBoundingClientRect();
+        const coin = document.createElement('div');
+        coin.className = 'piggy-flying-coin plain-coin';
+        coin.style.left = (b.left + b.width / 2) + 'px';
+        coin.style.top = (b.top + b.height / 2) + 'px';
+        coin.style.setProperty('--coin-x', ((p.left + p.width / 2) - (b.left + b.width / 2)) + 'px');
+        coin.style.setProperty('--coin-y', ((p.top + p.height / 2) - (b.top + b.height / 2)) + 'px');
+        document.body.appendChild(coin);
+        setTimeout(() => coin.remove(), 850);
       } catch (_) {}
     }
 
@@ -3334,6 +3353,7 @@ function piggyPageHTML() {
         transactions = [];
         profiles = [];
         calculatorHistory = [];
+        calcDraftNote = '';
         gameRooms = [];
         gameWallets = [];
         gameTransactions = [];
@@ -3346,12 +3366,20 @@ function piggyPageHTML() {
         suppressSoftUntil = 0;
         authHTML(true);
       },
-      calcPress(v) { if (v === 'C') { calcExpression=''; calcResult='0'; renderApp(); return; } calcExpression += v === '×' ? '*' : v === '÷' ? '/' : v; renderApp(); },
-      calcBack() { calcExpression = calcExpression.slice(0,-1); renderApp(); },
-      calcEquals() { try { if (!/^[0-9+\-*/().\s]+$/.test(calcExpression)) throw new Error(); const r = Function('"use strict";return ('+calcExpression+')')(); calcResult = Number.isFinite(Number(r)) ? String(Math.round(Number(r)*100)/100) : 'Eroare'; } catch { calcResult='Eroare'; } renderApp(); },
+      updateCalcDraftNote(value) { calcDraftNote = value || ''; },
+      syncCalcDraftNote() { const el = document.getElementById('calcNoteInput'); if (el) calcDraftNote = el.value || ''; },
+      calcPress(v) {
+        this.syncCalcDraftNote();
+        if (v === 'C') { calcExpression=''; calcResult='0'; renderApp(); return; }
+        calcExpression += v === '×' ? '*' : v === '÷' ? '/' : v;
+        renderApp();
+      },
+      calcBack() { this.syncCalcDraftNote(); calcExpression = calcExpression.slice(0,-1); renderApp(); },
+      calcEquals() { this.syncCalcDraftNote(); try { if (!/^[0-9+\-*/().\s]+$/.test(calcExpression)) throw new Error(); const r = Function('"use strict";return ('+calcExpression+')')(); calcResult = Number.isFinite(Number(r)) ? String(Math.round(Number(r)*100)/100) : 'Eroare'; } catch { calcResult='Eroare'; } renderApp(); },
       async saveCalc() {
         if (!calcExpression || calcResult === '0' || calcResult === 'Eroare') return alert('Fă întâi un calcul valid.');
-        const note = document.getElementById('calcNoteInput')?.value.trim() || '';
+        this.syncCalcDraftNote();
+        const note = calcDraftNote.trim();
         const btn = document.getElementById('saveCalcBtn');
         if (btn) { btn.disabled = true; btn.textContent = 'Se salvează...'; }
         const payload = { user_email:currentUser.email, expression:calcExpression, result:calcResult, note };
@@ -3362,6 +3390,7 @@ function piggyPageHTML() {
         }
         const saved = data || { ...payload, id:'local-calc-' + Date.now(), created_at:new Date().toISOString() };
         calculatorHistory = [saved, ...calculatorHistory.filter(c => c.id !== saved.id)].slice(0, 30);
+        calcDraftNote = '';
         suppressSoftUntil = Date.now() + 1400;
         const scroller = app.querySelector('.screen');
         const y = scroller ? scroller.scrollTop : 0;
