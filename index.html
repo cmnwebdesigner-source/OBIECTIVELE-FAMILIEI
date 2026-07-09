@@ -722,6 +722,107 @@
     .btn-delete-account { background: rgba(239,68,68,.12); color: #dc2626; border: 1px solid rgba(239,68,68,.22); }
     body.dark-mode .btn-delete-account { color:#fca5a5; background: rgba(239,68,68,.16); border-color: rgba(239,68,68,.24); }
 
+
+    /* PATCH: pușculiță modernă */
+    .top-piggy {
+      display:flex;
+      align-items:center;
+      gap:10px;
+      min-width:0;
+      max-width: 210px;
+    }
+    .piggy-icon-box {
+      width:46px;
+      height:46px;
+      border-radius:18px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      color:#0f172a;
+      background:linear-gradient(145deg, rgba(255,255,255,.98), rgba(226,232,240,.92));
+      border:1px solid rgba(15,23,42,.08);
+      box-shadow:0 12px 24px rgba(15,23,42,.08), inset 0 1px 0 rgba(255,255,255,.92);
+      flex-shrink:0;
+    }
+    .piggy-head-label { font-size:11px; color:var(--muted); line-height:1; }
+    .piggy-head-value { margin-top:4px; font-size:18px; font-weight:450; letter-spacing:-.035em; color:var(--text); white-space:nowrap; }
+    .piggy-card {
+      margin: 12px 0 18px;
+      border-radius: 26px;
+      padding: 14px;
+      background:
+        radial-gradient(circle at 0% 0%, rgba(37,99,235,.13), transparent 42%),
+        radial-gradient(circle at 100% 0%, rgba(22,163,74,.12), transparent 38%),
+        linear-gradient(145deg, rgba(255,255,255,.96), rgba(248,250,252,.90));
+      border: 1px solid rgba(15,23,42,.08);
+      box-shadow: 0 16px 38px rgba(15,23,42,.08), inset 0 1px 0 rgba(255,255,255,.94);
+      overflow:hidden;
+    }
+    .piggy-main { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px; }
+    .piggy-title-row { display:flex; align-items:center; gap:10px; min-width:0; }
+    .piggy-badge {
+      width:42px;
+      height:42px;
+      border-radius:17px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:linear-gradient(135deg, #0f172a, #2563eb);
+      color:#fff;
+      box-shadow:0 12px 22px rgba(37,99,235,.20);
+      flex-shrink:0;
+    }
+    .piggy-title { font-size:14px; font-weight:450; letter-spacing:-.02em; color:var(--text); }
+    .piggy-msg { font-size:11px; color:var(--muted); line-height:1.35; margin-top:3px; max-width:235px; }
+    .piggy-amount { text-align:right; flex-shrink:0; }
+    .piggy-amount b { display:block; font-size:21px; font-weight:450; letter-spacing:-.04em; line-height:1; color:var(--text); }
+    .piggy-amount span { font-size:10px; color:var(--muted); }
+    .piggy-progress-line { height:8px; border-radius:99px; background:rgba(15,23,42,.08); overflow:hidden; margin-bottom:11px; }
+    .piggy-progress-line span { display:block; height:100%; border-radius:inherit; background:linear-gradient(90deg,#2563eb,#22c55e); transition:width .26s ease; }
+    .coin-row { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin-bottom:12px; }
+    .coin-btn {
+      min-height:44px;
+      border-radius:16px;
+      padding:8px 8px;
+      background:rgba(255,255,255,.82);
+      border:1px solid rgba(15,23,42,.08);
+      color:var(--text);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:6px;
+      font-size:12px;
+      font-weight:450;
+      box-shadow:0 8px 18px rgba(15,23,42,.045);
+    }
+    .coin-btn:active { transform:scale(.98); }
+    .coin-dot { width:18px; height:18px; border-radius:999px; background:linear-gradient(135deg,#f59e0b,#fde68a); border:1px solid rgba(146,64,14,.14); box-shadow:inset 0 1px 0 rgba(255,255,255,.65); }
+    .milestone-row { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:6px; }
+    .milestone-chip {
+      border-radius:12px;
+      padding:7px 2px;
+      text-align:center;
+      font-size:10px;
+      color:var(--muted);
+      background:rgba(15,23,42,.045);
+      border:1px solid rgba(15,23,42,.055);
+      white-space:nowrap;
+    }
+    .milestone-chip.done { color:#15803d; background:rgba(22,163,74,.11); border-color:rgba(22,163,74,.16); }
+    .milestone-chip.next { color:#1d4ed8; background:rgba(37,99,235,.10); border-color:rgba(37,99,235,.16); }
+    body.dark-mode .piggy-icon-box,
+    body.dark-mode .piggy-card,
+    body.dark-mode .coin-btn {
+      background:rgba(15,23,42,.86);
+      border-color:rgba(255,255,255,.10);
+      box-shadow:0 16px 38px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.04);
+      color:var(--text);
+    }
+    body.dark-mode .piggy-progress-line { background:rgba(255,255,255,.08); }
+    body.dark-mode .milestone-chip { background:rgba(255,255,255,.055); border-color:rgba(255,255,255,.07); }
+    body.dark-mode .milestone-chip.done { color:#86efac; background:rgba(22,163,74,.15); border-color:rgba(134,239,172,.16); }
+    body.dark-mode .milestone-chip.next { color:#93c5fd; background:rgba(37,99,235,.17); border-color:rgba(147,197,253,.16); }
+
   </style>
 </head>
 <body>
@@ -776,7 +877,8 @@
       camera: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M7 7h2l1.5-2h3L15 7h2a3 3 0 0 1 3 3v7a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3v-7a3 3 0 0 1 3-3Z" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="13.5" r="3" stroke="currentColor" stroke-width="1.8"/></svg>',
       logOut: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M10 6H6a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h4M14 8l4 4-4 4M18 12H9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
       trash: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M9 4h6M4 7h16M10 11v6M14 11v6M6 7l1 13a1 1 0 0 0 1 .9h8a1 1 0 0 0 1-.9l1-13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
-      more: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="6" r="1.4" fill="currentColor"/><circle cx="12" cy="12" r="1.4" fill="currentColor"/><circle cx="12" cy="18" r="1.4" fill="currentColor"/></svg>'
+      more: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="6" r="1.4" fill="currentColor"/><circle cx="12" cy="12" r="1.4" fill="currentColor"/><circle cx="12" cy="18" r="1.4" fill="currentColor"/></svg>',
+      pig: '<svg width="23" height="23" viewBox="0 0 24 24" fill="none"><path d="M6.7 10.2C7.9 7.9 10.4 6.5 13.6 6.5h1.7c2.8 0 5.1 2.1 5.1 4.9 0 2.2-1.4 4.1-3.4 4.7l-.5 2.2h-2.2l-.4-1.7h-4.4l-.4 1.7H6.9l-.6-2.4A4.6 4.6 0 0 1 4.2 13H3.1a1.1 1.1 0 0 1 0-2.2h1.2c.4 0 .8-.2 1-.6l1.4-2.1h2.1" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M15.8 6.7c.4-1.4 1.5-2.4 3-2.7.4 1.5-.1 2.8-1.4 3.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><circle cx="16.8" cy="10.8" r=".7" fill="currentColor"/></svg>'
     };
 
     const money = (v) => Number(v || 0).toLocaleString('ro-RO', { maximumFractionDigits: 2 });
@@ -810,6 +912,24 @@
     const partnerEmail = () => profiles.find(p => p.email && p.email !== currentUser?.email && (!familyCode || p.family_code === familyCode))?.email || goals.find(g => g.owner !== currentUser?.email && goalBelongsToFamily(g))?.owner || null;
     const isGoalDone = (goal) => Number(goal?.current || 0) >= Number(goal?.target || 1);
     const isCommonGoal = (goal) => String(goal?.goal_type || '').toLowerCase() === 'common';
+    const PIGGY_TITLE = 'PUȘCULIȚĂ';
+    const PIGGY_MILESTONES = [
+      { target: 10, message: 'Primul prag e pornit. Monedele mici chiar se adună.' },
+      { target: 30, message: 'Deja se simte disciplina. Continuați așa.' },
+      { target: 50, message: 'Ați ajuns la un ritm frumos. Fiecare bănuț contează.' },
+      { target: 70, message: 'Pușculița crește serios. Sunteți aproape de 100 RON.' },
+      { target: 100, message: 'Provocarea e completă. Micile gesturi au devenit ceva mare.' }
+    ];
+    const isPiggyTransaction = (t) => transactionBelongsToFamily(t) && !t.goal_id && String(t.goal_title || '').toLocaleUpperCase('ro-RO') === PIGGY_TITLE;
+    const piggyTransactions = () => transactions.filter(isPiggyTransaction);
+    const piggyBalance = () => fromCents(piggyTransactions().reduce((s, t) => s + Math.max(0, toCents(t.amount || 0)), 0));
+    const piggyInfo = (balance) => {
+      const next = PIGGY_MILESTONES.find(m => balance < m.target) || PIGGY_MILESTONES[PIGGY_MILESTONES.length - 1];
+      const completed = balance >= PIGGY_MILESTONES[PIGGY_MILESTONES.length - 1].target;
+      const target = completed ? PIGGY_MILESTONES[PIGGY_MILESTONES.length - 1].target : next.target;
+      const message = completed ? PIGGY_MILESTONES[PIGGY_MILESTONES.length - 1].message : next.message;
+      return { target, message, completed, percent: Math.min(100, Math.round((balance / Math.max(1, target)) * 100)) };
+    };
     const showCompletedOnHome = (goal) => !isGoalDone(goal) || Number(completedHold[goal.id] || 0) > Date.now();
 
     function markGoalCompleted(goal, { render = true } = {}) {
@@ -989,11 +1109,16 @@
       const offered = transactions.filter(t => transactionBelongsToFamily(t) && t.from_role === currentUser.email && t.to_role !== currentUser.email).reduce((s,t) => s + Math.max(0, Number(t.amount || 0)), 0);
       const received = transactions.filter(t => transactionBelongsToFamily(t) && t.to_role === currentUser.email && t.from_role !== currentUser.email).reduce((s,t) => s + Math.max(0, Number(t.amount || 0)), 0);
       const partnerLabel = myRole === 'sot' ? 'Soției' : 'Soțului';
+      const piggy = piggyBalance();
+      const pig = piggyInfo(piggy);
       return `
         <div class="flex items-center justify-between mb-5">
-          <div class="min-w-0">
-            <p class="muted text-xs">Salut</p>
-            <h2 class="text-[28px] font-medium tracking-[-.04em] truncate">${roleLabel(myRole)}</h2>
+          <div class="top-piggy">
+            <div class="piggy-icon-box">${svg.pig}</div>
+            <div class="min-w-0">
+              <p class="piggy-head-label">Pușculiță</p>
+              <p class="piggy-head-value">${money(piggy)} RON</p>
+            </div>
           </div>
           <div class="quick-actions">
             <button class="icon-btn" onclick="window.appActions.openCalendar()" aria-label="Calendar">${svg.calendar}</button>
@@ -1015,6 +1140,8 @@
           </div>
         </div>
 
+        ${piggyHTML(piggy, pig)}
+
         <div class="section">
           <div class="section-head"><span>Obiectivele mele</span><small>${myGoals.length}</small></div>
           <div class="space-y-3">${myGoals.length ? myGoals.map(g => goalCard(g, true)).join('') : emptyHTML('Niciun obiectiv adăugat.')}</div>
@@ -1033,6 +1160,34 @@
         <div class="section">
           <div class="section-head"><span>Ultimele mișcări</span><small>azi</small></div>
           <div class="history-list space-y-2">${todayTransactions.length ? todayTransactions.map(transactionRow).join('') : emptyHTML('Nicio mișcare azi.')}</div>
+        </div>`;
+    }
+
+
+    function piggyHTML(balance, info) {
+      const milestones = PIGGY_MILESTONES.map(m => {
+        const cls = balance >= m.target ? 'done' : (m.target === info.target ? 'next' : '');
+        return `<span class="milestone-chip ${cls}">${m.target} lei</span>`;
+      }).join('');
+      return `
+        <div class="piggy-card">
+          <div class="piggy-main">
+            <div class="piggy-title-row">
+              <div class="piggy-badge">${svg.pig}</div>
+              <div class="min-w-0">
+                <p class="piggy-title">Pușculița voastră</p>
+                <p class="piggy-msg">${escapeHTML(info.message)}</p>
+              </div>
+            </div>
+            <div class="piggy-amount"><b>${money(balance)}</b><span>din ${money(info.target)} RON</span></div>
+          </div>
+          <div class="piggy-progress-line"><span style="width:${info.percent}%"></span></div>
+          <div class="coin-row">
+            <button class="coin-btn" onclick="window.appActions.addPiggyCoin(0.01)"><span class="coin-dot"></span>1 ban</button>
+            <button class="coin-btn" onclick="window.appActions.addPiggyCoin(0.10)"><span class="coin-dot"></span>10 bani</button>
+            <button class="coin-btn" onclick="window.appActions.addPiggyCoin(0.50)"><span class="coin-dot"></span>50 bani</button>
+          </div>
+          <div class="milestone-row">${milestones}</div>
         </div>`;
     }
 
@@ -1288,8 +1443,10 @@
     function transactionRow(t) {
       const amount = Number(t.amount || 0);
       const color = amount < 0 ? 'var(--danger)' : 'var(--success)';
-      const text = amount < 0 ? 'S-a scos din' : (t.from_role === t.to_role ? 'S-a pus la' : 'S-a oferit la');
-      return `<div class="card" style="padding:11px 12px"><div class="flex items-center justify-between gap-3"><p class="text-xs muted">${text} <span style="color:var(--text)">${escapeHTML(String(t.goal_title || '').toUpperCase())}</span></p><p class="text-xs" style="color:${color}; white-space:nowrap;">${amount > 0 ? '+' : ''}${money(amount)}</p></div></div>`;
+      const piggy = isPiggyTransaction(t);
+      const text = piggy ? 'Monedă pusă în' : (amount < 0 ? 'S-a scos din' : (t.from_role === t.to_role ? 'S-a pus la' : 'S-a oferit la'));
+      const title = piggy ? 'PUȘCULIȚĂ' : String(t.goal_title || '').toUpperCase();
+      return `<div class="card" style="padding:11px 12px"><div class="flex items-center justify-between gap-3"><p class="text-xs muted">${text} <span style="color:var(--text)">${escapeHTML(title)}</span></p><p class="text-xs" style="color:${color}; white-space:nowrap;">${amount > 0 ? '+' : ''}${money(amount)}</p></div></div>`;
     }
 
     function bottomNavHTML() {
@@ -1594,6 +1751,46 @@
           alert('Eroare la bani: ' + (error.message || error));
         }
       },
+
+      async addPiggyCoin(amount) {
+        const value = fromCents(toCents(amount));
+        if (!currentUser || !Number.isFinite(value) || value <= 0) return;
+        const localTransaction = {
+          id: 'local-piggy-' + Date.now(),
+          goal_id: null,
+          goal_title: PIGGY_TITLE,
+          amount: value,
+          from_role: currentUser.email,
+          to_role: currentUser.email,
+          date: todayISO(),
+          timestamp: new Date().toISOString(),
+          family_code: familyCode
+        };
+        transactions.unshift(localTransaction);
+        suppressSoftUntil = Date.now() + 900;
+        renderApp(true);
+        try {
+          const tr = await supabase.from('transactions').insert([{
+            goal_title: PIGGY_TITLE,
+            amount: value,
+            from_role: currentUser.email,
+            to_role: currentUser.email,
+            date: todayISO(),
+            timestamp: new Date().toISOString(),
+            family_code: familyCode
+          }]).select('*').maybeSingle();
+          if (tr.error) throw tr.error;
+          if (tr.data) transactions = transactions.map(t => t.id === localTransaction.id ? tr.data : t);
+          suppressSoftUntil = Date.now() + 900;
+          renderApp(true);
+          scheduleSoftRefresh();
+        } catch (error) {
+          transactions = transactions.filter(t => t.id !== localTransaction.id);
+          renderApp(true);
+          alert('Eroare la pușculiță: ' + (error.message || error));
+        }
+      },
+
 
       async saveFamilyCode() {
         const newCode = normalizeFamilyCode(document.getElementById('familyCodeSettingsInput')?.value || familyCode || DEFAULT_FAMILY_CODE);
