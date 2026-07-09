@@ -767,9 +767,9 @@
       display:flex;
       align-items:center;
       gap:10px;
-      min-width:0;
-      flex:1;
-      overflow:hidden;
+      min-width:120px;
+      flex:1 1 auto;
+      overflow:visible;
     }
     .top-piggy {
       width:54px;
@@ -787,7 +787,9 @@
     }
     .top-piggy:active { transform:scale(.94); }
     .top-piggy-copy {
-      min-width: 0;
+      display: block;
+      min-width: 92px;
+      flex: 0 0 auto;
       cursor: pointer;
       user-select: none;
       -webkit-user-select: none;
@@ -1310,7 +1312,21 @@
     };
     const toCents = (v) => Math.round(Number(v || 0) * 100);
     const fromCents = (v) => Math.round(Number(v || 0)) / 100;
-    const goalBelongsToFamily = (g) => g?.owner === currentUser?.email || (!!familyCode && g?.family_code === familyCode);
+    const goalBelongsToFamily = (g) => {
+      if (!g) return false;
+      if (g.owner === currentUser?.email) return true;
+      if (familyCode && g.family_code === familyCode) return true;
+
+      // Obiectivele comune trebuie să fie vizibile la amândoi.
+      // Dacă un obiectiv comun vechi nu are family_code salvat corect,
+      // îl arătăm în continuare când aparține partenerului cunoscut.
+      if (isCommonGoal(g)) {
+        const pEmail = partnerEmail();
+        if (pEmail && g.owner === pEmail) return true;
+      }
+
+      return false;
+    };
     const transactionBelongsToFamily = (t) => t?.from_role === currentUser?.email || t?.to_role === currentUser?.email || (!!familyCode && t?.family_code === familyCode);
     const todayISO = () => new Date().toISOString().split('T')[0];
     const addDays = (dateStr, days) => { const d = new Date(dateStr + 'T12:00:00'); d.setDate(d.getDate() + days); return d.toISOString().split('T')[0]; };
@@ -1323,7 +1339,7 @@
     const getRole = (email) => email === currentUser?.email ? (getProfile(email)?.role || currentUser?.user_metadata?.role || 'sot') : (getProfile(email)?.role || 'sotie');
     const roleLabel = (role) => role === 'sotie' ? 'Soție' : 'Soț';
     const ownerLabel = (email) => email === currentUser?.email ? 'Tu' : roleLabel(getRole(email));
-    const partnerEmail = () => profiles.find(p => p.email && p.email !== currentUser?.email && (!familyCode || p.family_code === familyCode))?.email || goals.find(g => g.owner !== currentUser?.email && goalBelongsToFamily(g))?.owner || null;
+    const partnerEmail = () => profiles.find(p => p.email && p.email !== currentUser?.email && (!familyCode || p.family_code === familyCode))?.email || goals.find(g => g.owner && g.owner !== currentUser?.email && (!familyCode || g.family_code === familyCode))?.owner || null;
     const isGoalDone = (goal) => Number(goal?.current || 0) >= Number(goal?.target || 1);
     const isCommonGoal = (goal) => {
       const type = String(goal?.goal_type || goal?.type || goal?.category || '').toLocaleLowerCase('ro-RO');
@@ -1428,13 +1444,20 @@
       if (!goal) return [];
       const goalId = String(goal.id || '');
       const goalTitle = normalizeGoalTitle(goal.title);
-      return visibleTransactions().filter(t => {
-        if (!transactionBelongsToFamily(t) || isPiggyTransaction(t)) return false;
-        if (goalId && String(t.goal_id || '') === goalId) return true;
+      const common = isCommonGoal(goal);
 
-        // Pentru obiective comune, păstrăm istoricul vizibil la amândoi chiar dacă o tranzacție veche
-        // a rămas salvată doar cu titlul obiectivului, nu cu id-ul corect.
-        if (isCommonGoal(goal) && goalTitle && normalizeGoalTitle(t.goal_title) === goalTitle) return true;
+      return visibleTransactions().filter(t => {
+        if (isPiggyTransaction(t)) return false;
+
+        const sameId = goalId && String(t.goal_id || '') === goalId;
+        const sameTitle = goalTitle && normalizeGoalTitle(t.goal_title) === goalTitle;
+
+        // La obiective comune, statisticile trebuie să apară la amândoi,
+        // inclusiv pentru banii puși/scoși de partener.
+        if (common && (sameId || sameTitle)) return true;
+
+        if (!transactionBelongsToFamily(t)) return false;
+        if (sameId) return true;
 
         return false;
       });
