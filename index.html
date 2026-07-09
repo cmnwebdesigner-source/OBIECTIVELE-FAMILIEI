@@ -634,11 +634,10 @@
     .family-code-card .label { font-size: 10px; margin-bottom: 3px; }
     .family-code-card .input { padding: 8px 10px; border-radius: 11px; font-size: 12px; min-height: 36px; }
     .family-code-card .btn { padding: 8px 10px; border-radius: 11px; white-space: nowrap; min-height: 36px; font-size: 12px; }
-    .family-code-lock { display:grid; grid-template-columns: 1fr 1fr; gap:8px; align-items:end; }
-    .family-code-value { display:flex; align-items:center; justify-content:center; width:100%; min-height:36px; padding:7px 12px; border-radius:12px; background:rgba(100,116,139,.12); border:1px solid rgba(100,116,139,.18); font-size:13px; letter-spacing:.12em; color:#64748b; }
-    .family-save-status { display:flex; align-items:center; justify-content:center; width:100%; min-height:36px; font-size:12px; color:var(--success); font-weight:600; white-space:nowrap; background:transparent; border:0; border-radius:0; }
-    body.dark-mode .family-code-value { background:rgba(148,163,184,.12); border-color:rgba(148,163,184,.18); color:#cbd5e1; }
-    body.dark-mode .family-save-status { color:#86efac; background:transparent; border:0; }
+    .family-code-lock { display:block; }
+    .family-code-value { display:flex; align-items:center; justify-content:flex-start; width:100%; min-height:34px; padding:7px 10px; border-radius:12px; background:rgba(100,116,139,.10); border:1px solid rgba(100,116,139,.14); font-size:13px; letter-spacing:.12em; color:#64748b; }
+    .family-save-status { display:none; }
+    body.dark-mode .family-code-value { background:rgba(148,163,184,.10); border-color:rgba(148,163,184,.14); color:#cbd5e1; }
     .family-code-note { display:none; }
     .profile-category-grid { display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom: 14px; }
     .profile-category-card {
@@ -1174,11 +1173,8 @@
         </div>
         <div class="card family-code-card mb-3">
           <div class="family-code-lock">
-            <div>
-              <p class="label">Cod familie</p>
-              <div class="family-code-value">${escapeHTML(familyCode || DEFAULT_FAMILY_CODE)}</div>
-            </div>
-            <div id="familyCodeSavedStatus" class="family-save-status">Salvat</div>
+            <p class="label">Cod familie</p>
+            <div class="family-code-value">${escapeHTML(familyCode || DEFAULT_FAMILY_CODE)}</div>
           </div>
         </div>
         ${profileGoalSections(currentUser.email, true)}
@@ -1545,9 +1541,7 @@
           dataLoadedOnce = false;
           completedNotified = new Set();
           await fetchData({ soft: true });
-          familyCodeStatus = 'Salvat';
-          const saved = document.getElementById('familyCodeSavedStatus');
-          if (saved) saved.textContent = 'Salvat';
+          familyCodeStatus = '';
           renderApp(true);
         } catch (error) {
           familyCode = oldCode;
