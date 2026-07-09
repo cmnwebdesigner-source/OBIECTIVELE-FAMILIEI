@@ -675,6 +675,8 @@
     let swipeStartX = 0;
     let swipeMoved = false;
     let completedHold = {};
+    let completedNotified = new Set();
+    let dataLoadedOnce = false;
     let familyCode = '';
     window.selectedSignupRole = 'sot';
 
@@ -727,11 +729,12 @@
     const isCommonGoal = (goal) => String(goal?.goal_type || '').toLowerCase() === 'common';
     const showCompletedOnHome = (goal) => !isGoalDone(goal) || Number(completedHold[goal.id] || 0) > Date.now();
 
-    function markGoalCompleted(goal) {
+    function markGoalCompleted(goal, { render = true } = {}) {
       if (!goal?.id) return;
+      completedNotified.add(goal.id);
       completedHold[goal.id] = Date.now() + 5000;
       showConfetti();
-      renderApp(true);
+      if (render) renderApp(true);
       setTimeout(() => {
         if (completedHold[goal.id] && completedHold[goal.id] <= Date.now()) {
           delete completedHold[goal.id];
@@ -766,22 +769,52 @@
 
     async function fetchData({ render = true, soft = false } = {}) {
       if (!currentUser) return;
+
+      const oldCompleted = new Set(goals.filter(isGoalDone).map(g => g.id));
+
       const [g, t, p, c] = await Promise.all([
         safeFetch(supabase.from('goals').select('*').order('created_at', { ascending: false })),
         safeFetch(supabase.from('transactions').select('*').order('timestamp', { ascending: false })),
         safeFetch(supabase.from('profiles').select('*').order('created_at', { ascending: true })),
         safeFetch(supabase.from('calculator_history').select('*').eq('user_email', currentUser.email).order('created_at', { ascending: false }).limit(30))
       ]);
+
       const ownProfile = p.find(x => x.id === currentUser?.id || x.email === currentUser?.email);
       if (ownProfile?.family_code) {
         familyCode = normalizeFamilyCode(ownProfile.family_code);
         localStorage.setItem(userFamilyStorageKey(), familyCode);
       }
-      profiles = p.filter(x => x.email === currentUser?.email || (!!familyCode && x.family_code === familyCode));
-      goals = g.filter(goalBelongsToFamily);
-      transactions = t.filter(transactionBelongsToFamily);
+
+      const filteredProfiles = p.filter(x => x.email === currentUser?.email || (!!familyCode && x.family_code === familyCode));
+      const filteredGoals = g.filter(goalBelongsToFamily);
+      const filteredTransactions = t.filter(transactionBelongsToFamily);
+
+      const newlyCompleted = [];
+      if (dataLoadedOnce) {
+        for (const goal of filteredGoals) {
+          if (isGoalDone(goal) && !oldCompleted.has(goal.id) && !completedNotified.has(goal.id)) {
+            newlyCompleted.push(goal);
+          }
+        }
+      }
+
+      profiles = filteredProfiles;
+      goals = filteredGoals;
+      transactions = filteredTransactions;
       calculatorHistory = c;
+
+      if (!dataLoadedOnce) {
+        completedNotified = new Set(goals.filter(isGoalDone).map(g => g.id));
+        dataLoadedOnce = true;
+      }
+
       if (render) renderApp(soft);
+
+      if (newlyCompleted.length) {
+        // Confetti apare pe ambele conturi când un obiectiv se finalizează prin realtime.
+        newlyCompleted.forEach(goal => markGoalCompleted(goal, { render: false }));
+        if (currentPage === 'home') renderApp(true);
+      }
     }
 
     function setupRealtime() {
@@ -1170,6 +1203,21 @@
           previousPage = 'home';
           selectedGoalId = null;
           await ensureOwnProfile();
+          if (inputFamilyCode) {
+            familyCode = inputFamilyCode;
+            localStorage.setItem(userFamilyStorageKey(), familyCode);
+            const rpc = await supabase.rpc('set_my_family_code', { p_family_code: familyCode });
+            if (rpc.error) {
+              const msg = String(rpc.error.message || rpc.error.details || '').toLowerCase();
+              const missingRpc = rpc.error.code === 'PGRST202' || msg.includes('function') || msg.includes('could not find');
+              if (!missingRpc) throw rpc.error;
+              await supabase.from('profiles').upsert({ id: currentUser.id, email: currentUser.email, role: getRole(currentUser.email), family_code: familyCode }, { onConflict: 'id' });
+              await supabase.from('goals').update({ family_code: familyCode }).eq('owner', currentUser.email);
+              await supabase.from('transactions').update({ family_code: familyCode }).or(`from_role.eq.${currentUser.email},to_role.eq.${currentUser.email}`);
+            }
+          }
+          dataLoadedOnce = false;
+          completedNotified = new Set();
           await fetchData();
           setupRealtime();
         } catch (e) {
@@ -1374,6 +1422,8 @@
             await supabase.from('goals').update({ family_code: familyCode }).eq('owner', currentUser.email);
             await supabase.from('transactions').update({ family_code: familyCode }).or(`from_role.eq.${currentUser.email},to_role.eq.${currentUser.email}`);
           }
+          dataLoadedOnce = false;
+          completedNotified = new Set();
           await fetchData({ soft: true });
           alert('Codul familie a fost salvat. Pune același cod și pe contul partenerei/partenerului.');
         } catch (error) {
@@ -1414,7 +1464,7 @@
         reader.readAsDataURL(file);
       },
       toggleTheme() { const dark = document.body.classList.toggle('dark-mode'); localStorage.setItem('appTheme', dark ? 'dark' : 'light'); },
-      async logout() { const k = userFamilyStorageKey(); await supabase.auth.signOut(); localStorage.removeItem('keepLogged'); sessionStorage.removeItem('pendingFamilyCode'); currentUser = null; familyCode = ''; authHTML(true); },
+      async logout() { const k = userFamilyStorageKey(); await supabase.auth.signOut(); localStorage.removeItem('keepLogged'); sessionStorage.removeItem('pendingFamilyCode'); currentUser = null; familyCode = ''; dataLoadedOnce = false; completedNotified = new Set(); authHTML(true); },
       calcPress(v) { if (v === 'C') { calcExpression=''; calcResult='0'; renderApp(); return; } calcExpression += v === '×' ? '*' : v === '÷' ? '/' : v; renderApp(); },
       calcBack() { calcExpression = calcExpression.slice(0,-1); renderApp(); },
       calcEquals() { try { if (!/^[0-9+\-*/().\s]+$/.test(calcExpression)) throw new Error(); const r = Function('"use strict";return ('+calcExpression+')')(); calcResult = Number.isFinite(Number(r)) ? String(Math.round(Number(r)*100)/100) : 'Eroare'; } catch { calcResult='Eroare'; } renderApp(); },
@@ -1437,6 +1487,21 @@
           previousPage = 'home';
           selectedGoalId = null;
           await ensureOwnProfile();
+          if (inputFamilyCode) {
+            familyCode = inputFamilyCode;
+            localStorage.setItem(userFamilyStorageKey(), familyCode);
+            const rpc = await supabase.rpc('set_my_family_code', { p_family_code: familyCode });
+            if (rpc.error) {
+              const msg = String(rpc.error.message || rpc.error.details || '').toLowerCase();
+              const missingRpc = rpc.error.code === 'PGRST202' || msg.includes('function') || msg.includes('could not find');
+              if (!missingRpc) throw rpc.error;
+              await supabase.from('profiles').upsert({ id: currentUser.id, email: currentUser.email, role: getRole(currentUser.email), family_code: familyCode }, { onConflict: 'id' });
+              await supabase.from('goals').update({ family_code: familyCode }).eq('owner', currentUser.email);
+              await supabase.from('transactions').update({ family_code: familyCode }).or(`from_role.eq.${currentUser.email},to_role.eq.${currentUser.email}`);
+            }
+          }
+          dataLoadedOnce = false;
+          completedNotified = new Set();
           await fetchData();
           setupRealtime();
         } else authHTML(true);
