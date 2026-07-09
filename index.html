@@ -1485,19 +1485,6 @@
           previousPage = 'home';
           selectedGoalId = null;
           await ensureOwnProfile();
-          if (inputFamilyCode) {
-            familyCode = inputFamilyCode;
-            localStorage.setItem(userFamilyStorageKey(), familyCode);
-            const rpc = await supabase.rpc('set_my_family_code', { p_family_code: familyCode });
-            if (rpc.error) {
-              const msg = String(rpc.error.message || rpc.error.details || '').toLowerCase();
-              const missingRpc = rpc.error.code === 'PGRST202' || msg.includes('function') || msg.includes('could not find');
-              if (!missingRpc) throw rpc.error;
-              await supabase.from('profiles').upsert({ id: currentUser.id, email: currentUser.email, role: getRole(currentUser.email), family_code: familyCode }, { onConflict: 'id' });
-              await supabase.from('goals').update({ family_code: familyCode }).eq('owner', currentUser.email);
-              await supabase.from('transactions').update({ family_code: familyCode }).or(`from_role.eq.${currentUser.email},to_role.eq.${currentUser.email}`);
-            }
-          }
           dataLoadedOnce = false;
           completedNotified = new Set();
           await fetchData();
