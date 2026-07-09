@@ -623,6 +623,28 @@
 
     .edit-goal-hint { font-size: 11px; color: var(--muted); line-height: 1.4; margin-top: 4px; }
 
+
+    .family-code-card { margin-top: 12px; }
+    .family-code-note { font-size: 11px; color: var(--muted); line-height: 1.45; margin-top: 8px; }
+    .profile-actions {
+      position: sticky;
+      bottom: 10px;
+      z-index: 25;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 9px;
+      padding: 10px;
+      margin-top: 18px;
+      border-radius: 24px;
+      background: rgba(255,255,255,.92);
+      border: 1px solid rgba(15,23,42,.08);
+      box-shadow: 0 20px 42px rgba(15,23,42,.12), inset 0 1px 0 rgba(255,255,255,.9);
+      backdrop-filter: blur(16px);
+    }
+    body.dark-mode .profile-actions { background: rgba(15,23,42,.92); border-color: rgba(255,255,255,.10); }
+    .btn-delete-account { background: rgba(239,68,68,.12); color: #dc2626; border: 1px solid rgba(239,68,68,.22); }
+    body.dark-mode .btn-delete-account { color:#fca5a5; background: rgba(239,68,68,.16); border-color: rgba(239,68,68,.24); }
+
   </style>
 </head>
 <body>
@@ -653,6 +675,7 @@
     let swipeStartX = 0;
     let swipeMoved = false;
     let completedHold = {};
+    let familyCode = '';
     window.selectedSignupRole = 'sot';
 
     const app = document.getElementById('app');
@@ -667,22 +690,39 @@
       calendar: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="4" y="5" width="16" height="15" rx="3" stroke="currentColor" stroke-width="1.8"/><path d="M8 3v4M16 3v4M4 10h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
       moon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M20 14.4A7.7 7.7 0 0 1 9.6 4a8 8 0 1 0 10.4 10.4Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>',
       camera: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M7 7h2l1.5-2h3L15 7h2a3 3 0 0 1 3 3v7a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3v-7a3 3 0 0 1 3-3Z" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="13.5" r="3" stroke="currentColor" stroke-width="1.8"/></svg>',
-      logOut: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M10 6H6a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h4M14 8l4 4-4 4M18 12H9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+      logOut: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M10 6H6a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h4M14 8l4 4-4 4M18 12H9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+      trash: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M9 4h6M4 7h16M10 11v6M14 11v6M6 7l1 13a1 1 0 0 0 1 .9h8a1 1 0 0 0 1-.9l1-13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>'
     };
 
     const money = (v) => Number(v || 0).toLocaleString('ro-RO', { maximumFractionDigits: 2 });
+
+    const normalizeFamilyCode = (v) => String(v || '')
+      .trim()
+      .toLocaleUpperCase('ro-RO')
+      .replace(/[^A-Z0-9ĂÂÎȘŞȚŢ_-]/gi, '')
+      .slice(0, 36);
+    const userFamilyStorageKey = () => currentUser?.id ? 'familyCode:' + currentUser.id : 'familyCode';
+    const parseAmount = (v) => {
+      const raw = String(v ?? '').trim().replace(/\s/g, '').replace(',', '.');
+      if (!raw || !/^\d+(\.\d{1,2})?$/.test(raw)) return NaN;
+      return Number(raw);
+    };
+    const toCents = (v) => Math.round(Number(v || 0) * 100);
+    const fromCents = (v) => Math.round(Number(v || 0)) / 100;
+    const goalBelongsToFamily = (g) => g?.owner === currentUser?.email || (!!familyCode && g?.family_code === familyCode);
+    const transactionBelongsToFamily = (t) => t?.from_role === currentUser?.email || t?.to_role === currentUser?.email || (!!familyCode && t?.family_code === familyCode);
     const todayISO = () => new Date().toISOString().split('T')[0];
     const addDays = (dateStr, days) => { const d = new Date(dateStr + 'T12:00:00'); d.setDate(d.getDate() + days); return d.toISOString().split('T')[0]; };
     const formatFullDate = (dateStr) => new Date(dateStr + 'T12:00:00').toLocaleDateString('ro-RO', { weekday:'long', day:'2-digit', month:'long' });
     const formatMonthTitle = (dateStr) => new Date(dateStr + 'T12:00:00').toLocaleDateString('ro-RO', { month:'long', year:'numeric' });
     const firstOfMonth = (dateStr) => { const d = new Date(dateStr + 'T12:00:00'); return new Date(d.getFullYear(), d.getMonth(), 1, 12).toISOString().split('T')[0]; };
     const shiftMonth = (dateStr, months) => { const d = new Date(dateStr + 'T12:00:00'); d.setMonth(d.getMonth() + months, 1); return d.toISOString().split('T')[0]; };
-    const hasMoneyOnDate = (dateStr) => transactions.some(t => String(t.date).slice(0,10) === dateStr && Number(t.amount || 0) > 0);
+    const hasMoneyOnDate = (dateStr) => transactions.some(t => transactionBelongsToFamily(t) && String(t.date).slice(0,10) === dateStr && Number(t.amount || 0) > 0);
     const getProfile = (email) => profiles.find(p => p.email === email);
     const getRole = (email) => email === currentUser?.email ? (getProfile(email)?.role || currentUser?.user_metadata?.role || 'sot') : (getProfile(email)?.role || 'sotie');
     const roleLabel = (role) => role === 'sotie' ? 'Soție' : 'Soț';
     const ownerLabel = (email) => email === currentUser?.email ? 'Tu' : roleLabel(getRole(email));
-    const partnerEmail = () => profiles.find(p => p.email && p.email !== currentUser?.email)?.email || goals.find(g => g.owner !== currentUser?.email)?.owner || null;
+    const partnerEmail = () => profiles.find(p => p.email && p.email !== currentUser?.email && (!familyCode || p.family_code === familyCode))?.email || goals.find(g => g.owner !== currentUser?.email && goalBelongsToFamily(g))?.owner || null;
     const isGoalDone = (goal) => Number(goal?.current || 0) >= Number(goal?.target || 1);
     const showCompletedOnHome = (goal) => !isGoalDone(goal) || Number(completedHold[goal.id] || 0) > Date.now();
 
@@ -710,7 +750,17 @@
     async function ensureOwnProfile() {
       if (!currentUser) return;
       const role = currentUser.user_metadata?.role || window.selectedSignupRole || 'sot';
-      await supabase.from('profiles').upsert({ id: currentUser.id, email: currentUser.email, role }, { onConflict: 'id' });
+      const pendingCode = normalizeFamilyCode(sessionStorage.getItem('pendingFamilyCode') || '');
+      const storedCode = normalizeFamilyCode(localStorage.getItem(userFamilyStorageKey()) || '');
+      let existing = null;
+      try {
+        const res = await supabase.from('profiles').select('id,email,role,family_code').eq('id', currentUser.id).maybeSingle();
+        existing = res.data || null;
+      } catch (_) {}
+      familyCode = normalizeFamilyCode(pendingCode || storedCode || existing?.family_code || currentUser.user_metadata?.family_code || currentUser.id.replace(/-/g,'').slice(0,8));
+      localStorage.setItem(userFamilyStorageKey(), familyCode);
+      sessionStorage.removeItem('pendingFamilyCode');
+      await supabase.from('profiles').upsert({ id: currentUser.id, email: currentUser.email, role: existing?.role || role, family_code: familyCode }, { onConflict: 'id' });
     }
 
     async function fetchData({ render = true, soft = false } = {}) {
@@ -721,7 +771,15 @@
         safeFetch(supabase.from('profiles').select('*').order('created_at', { ascending: true })),
         safeFetch(supabase.from('calculator_history').select('*').eq('user_email', currentUser.email).order('created_at', { ascending: false }).limit(30))
       ]);
-      goals = g; transactions = t; profiles = p; calculatorHistory = c;
+      const ownProfile = p.find(x => x.id === currentUser?.id || x.email === currentUser?.email);
+      if (ownProfile?.family_code) {
+        familyCode = normalizeFamilyCode(ownProfile.family_code);
+        localStorage.setItem(userFamilyStorageKey(), familyCode);
+      }
+      profiles = p.filter(x => x.email === currentUser?.email || (!!familyCode && x.family_code === familyCode));
+      goals = g.filter(goalBelongsToFamily);
+      transactions = t.filter(transactionBelongsToFamily);
+      calculatorHistory = c;
       if (render) renderApp(soft);
     }
 
@@ -785,6 +843,7 @@
             ${roleSelect}
             <div><p class="label">Email</p><input id="emailInput" class="input" type="email" autocomplete="email" placeholder="tu@familie.ro"></div>
             <div><p class="label">Parolă</p><input id="passInput" class="input" type="password" autocomplete="${isLogin ? 'current-password' : 'new-password'}" placeholder="••••••••"></div>
+            <div><p class="label">Cod familie</p><input id="familyCodeInput" class="input" type="text" autocomplete="off" placeholder="ex. IONUT-GABRIELA" style="text-transform:uppercase; letter-spacing:.04em;" oninput="this.value=this.value.toLocaleUpperCase('ro-RO').replace(/[^A-Z0-9ĂÂÎȘŞȚŢ_-]/g,'')"></div>
             <label class="flex items-center gap-3 text-sm muted px-1">
               <input id="keepLoggedInput" type="checkbox" checked style="accent-color:#d6b15d; width:18px; height:18px;">
               Ține-mă conectat
@@ -797,11 +856,11 @@
 
     function homeHTML() {
       const myRole = getRole(currentUser.email);
-      const myGoals = goals.filter(g => g.owner === currentUser.email && showCompletedOnHome(g));
-      const otherGoals = goals.filter(g => g.owner !== currentUser.email && showCompletedOnHome(g));
-      const todayTransactions = transactions.filter(t => String(t.date).slice(0,10) === todayISO()).slice(0,3);
-      const offered = transactions.filter(t => t.from_role === currentUser.email && t.to_role !== currentUser.email).reduce((s,t) => s + Math.max(0, Number(t.amount || 0)), 0);
-      const received = transactions.filter(t => t.to_role === currentUser.email && t.from_role !== currentUser.email).reduce((s,t) => s + Math.max(0, Number(t.amount || 0)), 0);
+      const myGoals = goals.filter(g => g.owner === currentUser.email && goalBelongsToFamily(g) && showCompletedOnHome(g));
+      const otherGoals = goals.filter(g => g.owner !== currentUser.email && goalBelongsToFamily(g) && showCompletedOnHome(g));
+      const todayTransactions = transactions.filter(t => transactionBelongsToFamily(t) && String(t.date).slice(0,10) === todayISO()).slice(0,3);
+      const offered = transactions.filter(t => transactionBelongsToFamily(t) && t.from_role === currentUser.email && t.to_role !== currentUser.email).reduce((s,t) => s + Math.max(0, Number(t.amount || 0)), 0);
+      const received = transactions.filter(t => transactionBelongsToFamily(t) && t.to_role === currentUser.email && t.from_role !== currentUser.email).reduce((s,t) => s + Math.max(0, Number(t.amount || 0)), 0);
       const partnerLabel = myRole === 'sot' ? 'Soției' : 'Soțului';
       return `
         <div class="flex items-center justify-between mb-5">
@@ -908,7 +967,7 @@
     }
 
     function calendarPageHTML() {
-      const selectedTransactions = transactions.filter(t => String(t.date).slice(0,10) === selectedDate);
+      const selectedTransactions = transactions.filter(t => transactionBelongsToFamily(t) && String(t.date).slice(0,10) === selectedDate);
       const totalDay = selectedTransactions.reduce((s,t) => s + Number(t.amount || 0), 0);
       return `
         ${backButton()}
@@ -929,7 +988,7 @@
     function partnerHTML() {
       const pEmail = partnerEmail();
       const pRole = pEmail ? getRole(pEmail) : (getRole(currentUser.email) === 'sot' ? 'sotie' : 'sot');
-      const list = goals.filter(g => g.owner !== currentUser.email);
+      const list = goals.filter(g => g.owner !== currentUser.email && goalBelongsToFamily(g));
       const active = list.filter(g => Number(g.current || 0) < Number(g.target || 0));
       const done = list.filter(g => Number(g.current || 0) >= Number(g.target || 0));
       return `
@@ -944,7 +1003,7 @@
     }
 
     function profileGoalSections(email, isMine) {
-      const list = goals.filter(g => g.owner === email);
+      const list = goals.filter(g => g.owner === email && goalBelongsToFamily(g));
       const active = list.filter(g => Number(g.current || 0) < Number(g.target || 0));
       const done = list.filter(g => Number(g.current || 0) >= Number(g.target || 0));
       const renderList = (items, empty) => items.length ? items.map(g => goalCard(g, isMine)).join('') : emptyHTML(empty);
@@ -978,8 +1037,17 @@
           <button class="theme-switch" onclick="window.appActions.toggleTheme()" aria-label="Schimbă tema"><span></span></button>
         </div>
         <div class="card mb-3"><p class="text-sm muted">Datele se salvează pe contul vostru și se sincronizează între telefoane prin Supabase.</p></div>
+        <div class="card family-code-card mb-3">
+          <p class="label">Cod familie</p>
+          <input id="familyCodeSettingsInput" class="input" value="${escapeHTML(familyCode)}" style="text-transform:uppercase; letter-spacing:.04em;" oninput="this.value=this.value.toLocaleUpperCase('ro-RO').replace(/[^A-Z0-9ĂÂÎȘŞȚŢ_-]/g,'')">
+          <p class="family-code-note">Pentru ca două conturi să vadă aceleași obiective, pune același cod pe ambele conturi. Alt cont nu mai vede mișcările voastre.</p>
+          <button class="btn btn-soft btn-full mt-3" onclick="window.appActions.saveFamilyCode()">Salvează codul</button>
+        </div>
         ${profileGoalSections(currentUser.email, true)}
-        <button class="btn btn-danger btn-full flex items-center justify-center gap-2 mt-4" onclick="window.appActions.logout()">${svg.logOut} Deconectare</button>`;
+        <div class="profile-actions">
+          <button class="btn btn-danger btn-full flex items-center justify-center gap-2" onclick="window.appActions.logout()">${svg.logOut} Deconectare</button>
+          <button class="btn btn-delete-account btn-full flex items-center justify-center gap-2" onclick="window.appActions.openDeleteAccount()">${svg.trash} Șterge Cont</button>
+        </div>`;
     }
 
     function calculatorHTML() {
@@ -996,7 +1064,7 @@
     function statsHTML() {
       const goal = goals.find(g => g.id === selectedGoalId);
       if (!goal) return `${backButton()}${emptyHTML('Obiectivul nu mai există.')}`;
-      const list = transactions.filter(t => t.goal_id === goal.id);
+      const list = transactions.filter(t => transactionBelongsToFamily(t) && t.goal_id === goal.id);
       const added = list.filter(t => Number(t.amount) > 0).reduce((s,t) => s + Number(t.amount), 0);
       const removed = list.filter(t => Number(t.amount) < 0).reduce((s,t) => s + Math.abs(Number(t.amount)), 0);
       const current = Number(goal.current || 0), target = Number(goal.target || 1);
@@ -1006,7 +1074,7 @@
       const dates = Object.keys(byDate).sort((a,b) => b.localeCompare(a));
       return `
         ${backButton()}
-        <div class="top-card mb-4"><p class="muted text-xs">Statistici</p><h2 class="text-2xl font-medium tracking-[-.03em]">${escapeHTML(String(goal.title || '').toUpperCase())}</h2><p class="muted text-sm mt-1">${money(current)} din ${money(target)} RON</p><div class="progress mt-4 ${percent>=100?'done':''}"><span style="width:${percent}%"></span></div>${goal.owner === currentUser.email && percent < 100 ? `<button class="btn btn-soft btn-full mt-3" onclick="window.appActions.openEditGoal('${goal.id}')">Editează obiectivul</button>` : ''}</div>
+        <div class="top-card mb-4"><p class="muted text-xs">Statistici</p><h2 class="text-2xl font-medium tracking-[-.03em]">${escapeHTML(String(goal.title || '').toUpperCase())}</h2><p class="muted text-sm mt-1">${money(current)} din ${money(target)} RON</p><div class="progress mt-4 ${percent>=100?'done':''}"><span style="width:${percent}%"></span></div>${goal.owner === currentUser.email ? `<button class="btn btn-soft btn-full mt-3" onclick="window.appActions.openEditGoal('${goal.id}')">Editează obiectivul</button>` : ''}</div>
         <div class="stat-grid mb-4"><div class="stat-mini"><span>Pus</span><b>${money(added)}</b></div><div class="stat-mini"><span>Scos</span><b>${money(removed)}</b></div><div class="stat-mini"><span>Mișcări</span><b>${list.length}</b></div></div>
         <div class="section"><div class="section-head"><span>Pe zile</span></div><div class="space-y-3">${dates.length ? dates.map(d => `<div class="card"><div class="flex justify-between mb-2"><span class="text-sm capitalize">${formatFullDate(d)}</span><span class="text-sm muted">${byDate[d].length}</span></div><div class="space-y-2">${byDate[d].map(transactionRow).join('')}</div></div>`).join('') : emptyHTML('Nu există încă statistici.')}</div></div>`;
     }
@@ -1054,13 +1122,15 @@
         const email = document.getElementById('emailInput').value.trim();
         const password = document.getElementById('passInput').value;
         const keep = document.getElementById('keepLoggedInput')?.checked !== false;
+        const inputFamilyCode = normalizeFamilyCode(document.getElementById('familyCodeInput')?.value || '');
         const btn = document.getElementById('authBtn');
         if (!email || !password) return alert('Completează emailul și parola.');
         btn.textContent = 'Se procesează...'; btn.disabled = true;
         try {
+          if (inputFamilyCode) sessionStorage.setItem('pendingFamilyCode', inputFamilyCode);
           let result;
           if (isLogin) result = await supabase.auth.signInWithPassword({ email, password });
-          else result = await supabase.auth.signUp({ email, password, options: { data: { role: window.selectedSignupRole } } });
+          else result = await supabase.auth.signUp({ email, password, options: { data: { role: window.selectedSignupRole, family_code: inputFamilyCode } } });
           if (result.error) throw result.error;
           localStorage.setItem('keepLogged', keep ? '1' : '0');
           currentUser = result.data.user || result.data.session?.user;
@@ -1096,7 +1166,7 @@
         const titleInput = document.getElementById('goalTitleInput');
         const targetInput = document.getElementById('goalTargetInput');
         const title = (titleInput?.value || '').trim().toLocaleUpperCase('ro-RO');
-        const target = Number.parseFloat(targetInput?.value || '');
+        const target = parseAmount(targetInput?.value || '');
         if (!title || !Number.isFinite(target) || target <= 0) return alert('Date invalide.');
         const btn = document.getElementById('saveGoalBtn');
         btn.textContent = 'Salvez...'; btn.disabled = true;
@@ -1107,14 +1177,14 @@
             currentUser = sessionData.session?.user || currentUser;
           }
           if (!currentUser?.email) throw new Error('Nu ești conectat. Reconectează-te și încearcă iar.');
-          localGoal = { id: crypto.randomUUID(), title, target, current: 0, owner: currentUser.email, created_at: new Date().toISOString() };
+          localGoal = { id: crypto.randomUUID(), title, target, current: 0, owner: currentUser.email, family_code: familyCode, created_at: new Date().toISOString() };
           goals.unshift(localGoal);
           this.closeModal();
           renderApp();
 
           const rpc = await supabase.rpc('create_goal_safe', { p_title: title, p_target: target });
           if (rpc.error) {
-            const direct = await supabase.from('goals').insert({ title, target, current: 0, owner: currentUser.email }).select('*').maybeSingle();
+            const direct = await supabase.from('goals').insert({ title, target, current: 0, owner: currentUser.email, family_code: familyCode }).select('*').maybeSingle();
             if (direct.error) throw direct.error;
             if (direct.data) goals = goals.map(g => g.id === localGoal.id ? direct.data : g);
           } else if (rpc.data) {
@@ -1131,19 +1201,16 @@
       openEditGoal(id) {
         const g = goals.find(x => x.id === id); if (!g) return;
         if (g.owner !== currentUser.email) return alert('Poți edita doar obiectivul tău.');
-        if (isGoalDone(g)) return alert('Obiectiv finalizat. Nu mai poate fi editat.');
-        modal.innerHTML = `<div class="modal-backdrop"><div class="sheet"><div class="grab"></div><h3 class="text-xl font-medium mb-1">Editează obiectivul</h3><p class="text-sm muted mb-2">${escapeHTML(String(g.title || '').toUpperCase())}</p><p class="edit-goal-hint">Mărește suma obiectivului și apasă Salvează. Suma nouă trebuie să fie mai mare decât ${money(g.target)} RON.</p><div class="space-y-3 mt-4"><input id="editGoalTargetInput" type="number" class="input" placeholder="Suma nouă" value="${Number(g.target || 0)}"><div class="grid grid-cols-2 gap-2 pt-2"><button class="btn btn-soft btn-full" onclick="window.appActions.closeModal()">Anulează</button><button id="editGoalBtn" class="btn btn-gold btn-full" onclick="window.appActions.saveEditGoalTarget('${id}')">Salvează</button></div></div></div></div>`;
+        modal.innerHTML = `<div class="modal-backdrop"><div class="sheet"><div class="grab"></div><h3 class="text-xl font-medium mb-1">Editează obiectivul</h3><p class="text-sm muted mb-2">${escapeHTML(String(g.title || '').toUpperCase())}</p><p class="edit-goal-hint">Poți mări sau scădea suma obiectivului, apoi apeși Salvează.</p><div class="space-y-3 mt-4"><input id="editGoalTargetInput" type="text" inputmode="decimal" class="input" placeholder="Suma nouă" value="${Number(g.target || 0)}"><div class="grid grid-cols-2 gap-2 pt-2"><button class="btn btn-soft btn-full" onclick="window.appActions.closeModal()">Anulează</button><button id="editGoalBtn" class="btn btn-gold btn-full" onclick="window.appActions.saveEditGoalTarget('${id}')">Salvează</button></div></div></div></div>`;
       },
       async saveEditGoalTarget(id) {
         const g = goals.find(x => x.id === id); if (!g) return;
         if (g.owner !== currentUser.email) return alert('Poți edita doar obiectivul tău.');
-        if (isGoalDone(g)) return alert('Obiectiv finalizat. Nu mai poate fi editat.');
         const oldTarget = Number(g.target || 0);
-        const current = Number(g.current || 0);
-        const newTarget = Number.parseFloat(document.getElementById('editGoalTargetInput')?.value || '');
+        const wasDone = isGoalDone(g);
+        const newTarget = parseAmount(document.getElementById('editGoalTargetInput')?.value || '');
         if (!Number.isFinite(newTarget) || newTarget <= 0) return alert('Suma nouă este invalidă.');
-        if (newTarget <= oldTarget) return alert('Suma nouă trebuie să fie mai mare decât suma actuală a obiectivului.');
-        if (newTarget < current) return alert('Suma nouă nu poate fi mai mică decât banii deja strânși.');
+        if (toCents(newTarget) === toCents(oldTarget)) return alert('Suma este aceeași.');
         const btn = document.getElementById('editGoalBtn');
         if (btn) { btn.textContent = 'Salvez...'; btn.disabled = true; }
         g.target = newTarget;
@@ -1158,6 +1225,7 @@
             const upd = await supabase.from('goals').update({ target: newTarget }).eq('id', id).select('target').maybeSingle();
             if (upd.error) throw upd.error;
           }
+          if (!wasDone && isGoalDone(g)) markGoalCompleted(g);
           scheduleSoftRefresh();
         } catch (error) {
           g.target = oldTarget;
@@ -1172,24 +1240,31 @@
         const action = mode === 'remove' ? 'Scoate' : mode === 'gift' ? 'Oferă' : 'Pune';
         const remaining = Math.max(0, Number(g.target || 0) - Number(g.current || 0));
         const limitText = mode === 'remove' ? `Poți scoate maxim ${money(Number(g.current || 0))} RON.` : `Poți pune maxim ${money(remaining)} RON, cât lipsește până la obiectiv.`;
-        modal.innerHTML = `<div class="modal-backdrop"><div class="sheet"><div class="grab"></div><h3 class="text-xl font-medium mb-1">${title}</h3><p class="text-sm muted mb-1">${escapeHTML(String(g.title || '').toUpperCase())}</p><p class="edit-goal-hint mb-4">${limitText}</p><div class="space-y-3"><input id="moneyAmountInput" type="number" class="input" placeholder="RON" min="1" max="${mode === 'remove' ? Number(g.current || 0) : remaining}"><div class="grid grid-cols-2 gap-2 pt-2"><button class="btn btn-soft btn-full" onclick="window.appActions.closeModal()">Anulează</button><button id="moneyBtn" class="btn btn-gold btn-full" onclick="window.appActions.applyMoney('${id}','${mode}')">${action}</button></div></div></div></div>`;
+        modal.innerHTML = `<div class="modal-backdrop"><div class="sheet"><div class="grab"></div><h3 class="text-xl font-medium mb-1">${title}</h3><p class="text-sm muted mb-1">${escapeHTML(String(g.title || '').toUpperCase())}</p><p class="edit-goal-hint mb-4">${limitText}</p><div class="space-y-3"><input id="moneyAmountInput" type="text" inputmode="decimal" class="input" placeholder="RON" autocomplete="off"><div class="grid grid-cols-2 gap-2 pt-2"><button class="btn btn-soft btn-full" onclick="window.appActions.closeModal()">Anulează</button><button id="moneyBtn" class="btn btn-gold btn-full" onclick="window.appActions.applyMoney('${id}','${mode}')">${action}</button></div></div></div></div>`;
       },
       async applyMoney(id, mode) {
-        const amountRaw = parseFloat(document.getElementById('moneyAmountInput')?.value || '');
+        const amountRaw = parseAmount(document.getElementById('moneyAmountInput')?.value || '');
         const g = goals.find(x => x.id === id);
-        if (!g || !amountRaw || amountRaw <= 0) return alert('Sumă invalidă.');
+        if (!g || !Number.isFinite(amountRaw) || amountRaw <= 0) return alert('Sumă invalidă.');
         if (isGoalDone(g)) return alert('Obiectiv finalizat. Nu mai poți modifica suma.');
         if (mode === 'remove' && g.owner !== currentUser.email) return alert('Poți scoate doar din obiectivul tău.');
-        if (mode === 'remove' && amountRaw > Number(g.current || 0)) return alert('Nu poți scoate mai mult decât există.');
 
         const old = Number(g.current || 0);
         const target = Number(g.target || 0);
-        const remaining = Math.max(0, target - old);
-        if (mode !== 'remove' && amountRaw > remaining) return alert('Poți pune maxim ' + money(remaining) + ' RON. Ce este peste obiectiv nu se acceptă.');
-        const requestedDelta = mode === 'remove' ? -amountRaw : amountRaw;
-        const optimistic = old + requestedDelta;
+        const oldCents = toCents(old);
+        const targetCents = toCents(target);
+        const amountCents = toCents(amountRaw);
+        const remainingCents = Math.max(0, targetCents - oldCents);
+
+        if (amountCents <= 0) return alert('Sumă invalidă.');
+        if (mode === 'remove' && amountCents > oldCents) return alert('Nu poți scoate mai mult decât există.');
+        if (mode !== 'remove' && amountCents > remainingCents) return alert('Poți pune maxim ' + money(fromCents(remainingCents)) + ' RON. Ce este peste obiectiv nu se acceptă.');
+        if (mode !== 'remove' && remainingCents <= 0) return alert('Obiectiv finalizat. Nu mai poți modifica suma.');
+
+        const requestedDeltaCents = mode === 'remove' ? -amountCents : amountCents;
+        const requestedDelta = fromCents(requestedDeltaCents);
+        const optimistic = fromCents(oldCents + requestedDeltaCents);
         const optimisticDelta = requestedDelta;
-        if (optimisticDelta === 0) return alert('Sumă invalidă.');
 
         const btn = document.getElementById('moneyBtn');
         if (btn) { btn.textContent = 'Se salvează...'; btn.disabled = true; }
@@ -1203,7 +1278,8 @@
           from_role: currentUser.email,
           to_role: g.owner,
           date: todayISO(),
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
+          family_code: familyCode
         };
         transactions.unshift(localTransaction);
         this.closeModal();
@@ -1227,7 +1303,7 @@
 
           g.current = finalAmount;
           localTransaction.amount = actualDelta;
-          const tr = await supabase.from('transactions').insert([{ goal_id:id, goal_title:String(g.title || '').toUpperCase(), amount:actualDelta, from_role:currentUser.email, to_role:g.owner, date:todayISO(), timestamp:new Date().toISOString() }]).select('*').maybeSingle();
+          const tr = await supabase.from('transactions').insert([{ goal_id:id, goal_title:String(g.title || '').toUpperCase(), amount:actualDelta, from_role:currentUser.email, to_role:g.owner, date:todayISO(), timestamp:new Date().toISOString(), family_code: familyCode }]).select('*').maybeSingle();
           if (tr.error) throw tr.error;
           if (tr.data) transactions = transactions.map(t => t.id === localTransaction.id ? tr.data : t);
           renderApp(true);
@@ -1240,6 +1316,49 @@
           alert('Eroare la bani: ' + (error.message || error));
         }
       },
+
+      async saveFamilyCode() {
+        const newCode = normalizeFamilyCode(document.getElementById('familyCodeSettingsInput')?.value || '');
+        if (!newCode) return alert('Scrie un cod familie.');
+        const oldCode = familyCode;
+        familyCode = newCode;
+        localStorage.setItem(userFamilyStorageKey(), familyCode);
+        try {
+          const rpc = await supabase.rpc('set_my_family_code', { p_family_code: familyCode });
+          if (rpc.error) {
+            const msg = String(rpc.error.message || rpc.error.details || '').toLowerCase();
+            const missingRpc = rpc.error.code === 'PGRST202' || msg.includes('function') || msg.includes('could not find');
+            if (!missingRpc) throw rpc.error;
+            const up = await supabase.from('profiles').upsert({ id: currentUser.id, email: currentUser.email, role: getRole(currentUser.email), family_code: familyCode }, { onConflict: 'id' });
+            if (up.error) throw up.error;
+            await supabase.from('goals').update({ family_code: familyCode }).eq('owner', currentUser.email);
+            await supabase.from('transactions').update({ family_code: familyCode }).or(`from_role.eq.${currentUser.email},to_role.eq.${currentUser.email}`);
+          }
+          await fetchData({ soft: true });
+          alert('Codul familie a fost salvat. Pune același cod și pe contul partenerei/partenerului.');
+        } catch (error) {
+          familyCode = oldCode;
+          localStorage.setItem(userFamilyStorageKey(), familyCode);
+          alert('Eroare la cod familie: ' + (error.message || error));
+        }
+      },
+      openDeleteAccount() {
+        modal.innerHTML = `<div class="modal-backdrop"><div class="sheet"><div class="grab"></div><h3 class="text-xl font-medium mb-1">Șterge cont</h3><p class="text-sm muted mb-4">Asta șterge contul tău, obiectivele tale, calculele tale și datele tale din aplicație. Acțiunea nu se poate anula.</p><div class="grid grid-cols-2 gap-2"><button class="btn btn-soft btn-full" onclick="window.appActions.closeModal()">Anulează</button><button class="btn btn-delete-account btn-full" onclick="window.appActions.deleteAccount()">Șterge Cont</button></div></div></div>`;
+      },
+      async deleteAccount() {
+        try {
+          const { error } = await supabase.rpc('delete_my_account');
+          if (error) throw error;
+          localStorage.removeItem('keepLogged');
+          localStorage.removeItem(userFamilyStorageKey());
+          await supabase.auth.signOut();
+          currentUser = null;
+          modal.innerHTML = '';
+          authHTML(true);
+        } catch (error) {
+          alert('Eroare la ștergere cont: ' + (error.message || error));
+        }
+      },
       async uploadAvatar(e) {
         const file = e.target.files[0]; if (!file) return;
         if (file.size > 900000) return alert('Alege o poză mai mică.');
@@ -1247,15 +1366,15 @@
         reader.onload = async ev => {
           const avatar = ev.target.result;
           const role = getRole(currentUser.email);
-          const { error } = await supabase.from('profiles').upsert({ id:currentUser.id, email:currentUser.email, role, avatar }, { onConflict:'id' });
+          const { error } = await supabase.from('profiles').upsert({ id:currentUser.id, email:currentUser.email, role, avatar, family_code: familyCode }, { onConflict:'id' });
           if (error) return alert(error.message);
-          const p = getProfile(currentUser.email); if (p) p.avatar = avatar; else profiles.push({ id:currentUser.id, email:currentUser.email, role, avatar });
+          const p = getProfile(currentUser.email); if (p) p.avatar = avatar; else profiles.push({ id:currentUser.id, email:currentUser.email, role, avatar, family_code: familyCode });
           renderApp();
         };
         reader.readAsDataURL(file);
       },
       toggleTheme() { const dark = document.body.classList.toggle('dark-mode'); localStorage.setItem('appTheme', dark ? 'dark' : 'light'); },
-      async logout() { await supabase.auth.signOut(); localStorage.removeItem('keepLogged'); currentUser = null; authHTML(true); },
+      async logout() { const k = userFamilyStorageKey(); await supabase.auth.signOut(); localStorage.removeItem('keepLogged'); sessionStorage.removeItem('pendingFamilyCode'); currentUser = null; familyCode = ''; authHTML(true); },
       calcPress(v) { if (v === 'C') { calcExpression=''; calcResult='0'; renderApp(); return; } calcExpression += v === '×' ? '*' : v === '÷' ? '/' : v; renderApp(); },
       calcBack() { calcExpression = calcExpression.slice(0,-1); renderApp(); },
       calcEquals() { try { if (!/^[0-9+\-*/().\s]+$/.test(calcExpression)) throw new Error(); const r = Function('"use strict";return ('+calcExpression+')')(); calcResult = Number.isFinite(Number(r)) ? String(Math.round(Number(r)*100)/100) : 'Eroare'; } catch { calcResult='Eroare'; } renderApp(); },
