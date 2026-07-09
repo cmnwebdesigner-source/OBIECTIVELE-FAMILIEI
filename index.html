@@ -1345,6 +1345,9 @@
     const NOTIFICATION_READY_KEY = 'familie_push_notifications_ready';
     const notificationsAreReady = () => localStorage.getItem(NOTIFICATION_READY_KEY) === '1' || (typeof Notification !== 'undefined' && Notification.permission === 'granted');
     const notificationButtonText = () => notificationsAreReady() ? 'Notificari Activate' : 'Activeaza notificarile';
+    const actorPushLabel = () => getRole(currentUser?.email) === 'sotie' ? 'Soția' : 'Soțul';
+    const pushGoalTitle = (goalOrTitle) => String(typeof goalOrTitle === 'string' ? goalOrTitle : goalOrTitle?.title || '').trim().toLocaleUpperCase('ro-RO');
+    const pushRonAmount = (value) => `${money(Math.abs(Number(value || 0)))} RON`;
     const pushSupported = () => 'serviceWorker' in navigator && 'PushManager' in window && typeof Notification !== 'undefined';
     const urlBase64ToUint8Array = (base64String) => {
       const padding = '='.repeat((4 - base64String.length % 4) % 4);
@@ -2862,6 +2865,21 @@ function piggyPageHTML() {
           const direct = await supabase.from('goals').insert({ title, target, current: 0, owner: currentUser.email, family_code: familyCode, goal_type: goalType, currency }).select('*').maybeSingle();
           if (direct.error) throw direct.error;
           if (direct.data) goals = goals.map(g => g.id === localGoal.id ? direct.data : g);
+
+          if (goalType === 'common') {
+            sendPushNotification({
+              event_type: 'goal_common_created',
+              title: 'Obiectiv comun nou',
+              body: `A fost adăugat obiectivul comun „${pushGoalTitle(title)}”.`
+            });
+          } else {
+            sendPushNotification({
+              event_type: 'goal_created',
+              title: 'Obiectiv nou adăugat',
+              body: `${actorPushLabel()} a adăugat obiectivul „${pushGoalTitle(title)}”.`
+            });
+          }
+
           suppressSoftUntil = Date.now() + 1300;
           renderApp(true);
           scheduleSoftRefresh();
@@ -3048,8 +3066,45 @@ function piggyPageHTML() {
           const tr = await supabase.from('transactions').insert([{ goal_id:id, goal_title:String(g.title || '').toUpperCase(), amount:actualDelta, amount_ron: localTransaction.amount_ron, currency, exchange_rate: exchangeRate, from_role:currentUser.email, to_role:g.owner, date:todayISO(), timestamp:nowIso, family_code: familyCode }]).select('*').maybeSingle();
           if (tr.error) throw tr.error;
           if (tr.data) transactions = transactions.map(t => t.id === localTransaction.id ? tr.data : t);
+
+          const pushAmountText = pushRonAmount(localTransaction.amount_ron);
+          const titleForPush = pushGoalTitle(g);
+
+          if (mode === 'remove') {
+            sendPushNotification({
+              event_type: 'money_removed',
+              title: 'Bani scoși',
+              body: `${actorPushLabel()} a scos ${pushAmountText} din „${titleForPush}”.`
+            });
+          } else if (mode === 'gift') {
+            sendPushNotification({
+              event_type: 'money_gifted',
+              title: 'Ai primit bani',
+              body: `${actorPushLabel()} ți-a oferit ${pushAmountText} pentru „${titleForPush}”.`
+            });
+          } else if (isCommonGoal(g)) {
+            sendPushNotification({
+              event_type: 'money_common_added',
+              title: 'Bani la obiectiv comun',
+              body: `${actorPushLabel()} a pus ${pushAmountText} la obiectivul comun „${titleForPush}”.`
+            });
+          } else {
+            sendPushNotification({
+              event_type: 'money_added',
+              title: 'Bani adăugați',
+              body: `${actorPushLabel()} a pus ${pushAmountText} la „${titleForPush}”.`
+            });
+          }
+
           suppressSoftUntil = Date.now() + 1600;
-          if (old < target && finalAmount >= target) markGoalCompleted(g);
+          if (old < target && finalAmount >= target) {
+            markGoalCompleted(g);
+            sendPushNotification({
+              event_type: 'goal_completed',
+              title: 'Obiectiv finalizat 🎉',
+              body: `Obiectivul „${titleForPush}” a fost completat.`
+            });
+          }
           scheduleSoftRefresh();
         } catch (error) {
           g.current = old;
@@ -3108,8 +3163,8 @@ function piggyPageHTML() {
 
           sendPushNotification({
             event_type: 'piggy_coin',
-            title: 'Monedă nouă în pușculiță',
-            body: `Încă un bănuț pus împreună. Pușculița are acum ${money(afterBalance)} RON.`
+            title: 'Pușculița',
+            body: `${actorPushLabel()} a adăugat un bănuț în pușculiță. Pușculița are acum ${money(afterBalance)} RON.`
           });
 
           suppressSoftUntil = Date.now() + 1600;
@@ -3158,6 +3213,13 @@ function piggyPageHTML() {
           }]).select('*').maybeSingle();
           if (tr.error) throw tr.error;
           if (tr.data) transactions = transactions.map(t => t.id === localTransaction.id ? tr.data : t);
+
+          sendPushNotification({
+            event_type: 'piggy_break',
+            title: 'Pușculița a fost spartă',
+            body: `${actorPushLabel()} a spart pușculița. Soldul a fost resetat.`
+          });
+
           suppressSoftUntil = Date.now() + 1600;
           scheduleSoftRefresh();
         } catch (error) {
