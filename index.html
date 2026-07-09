@@ -967,7 +967,7 @@
 
   
 
-    /* Jocuri / Flappy */
+    /* Jocuri / Prinde banii */
     .game-wallet-card {
       border-radius:26px;
       padding:16px;
@@ -999,7 +999,8 @@
     .game-pill { display:inline-flex; align-items:center; gap:6px; min-height:28px; padding:0 10px; border-radius:999px; background:rgba(15,23,42,.06); color:var(--muted); font-size:11px; }
     .game-pill.live { background:rgba(34,197,94,.12); color:#16a34a; }
     .game-pill.wait { background:rgba(234,179,8,.14); color:#a16207; }
-    .flappy-shell { position:relative; overflow:hidden; border-radius:28px; background:linear-gradient(180deg,#bde8ff,#eaf8ff 68%,#b8e986 69%,#7ccf55); border:1px solid rgba(15,23,42,.08); box-shadow:0 18px 36px rgba(15,23,42,.10); }
+    .flappy-shell { position:relative; overflow:hidden; border-radius:28px; background:linear-gradient(180deg,#dff3ff,#f8fbff 55%,#e5f6ff); border:1px solid rgba(15,23,42,.08); box-shadow:0 18px 36px rgba(15,23,42,.10); }
+    .catch-hint { position:absolute; left:12px; right:12px; bottom:12px; z-index:2; border-radius:18px; padding:10px 12px; background:rgba(255,255,255,.72); backdrop-filter:blur(10px); color:#0f172a; font-size:12px; text-align:center; pointer-events:none; }
     .flappy-canvas { display:block; width:100%; height:520px; max-height:68vh; touch-action:none; }
     .flappy-overlay { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:20px; background:rgba(255,255,255,.35); backdrop-filter:blur(3px); }
     .flappy-count { font-size:54px; line-height:1; font-weight:500; color:#0f172a; letter-spacing:-.06em; }
@@ -1065,7 +1066,7 @@
     let flappyLoop = null;
     let flappyCountdownTimer = null;
     let lastAutoGameRoomId = '';
-    const GAME_TYPE_FLAPPY = 'flappy';
+    const GAME_TYPE_FLAPPY = 'catch_money';
     const DEFAULT_FAMILY_CODE = '280706';
     const PIN_USERS = {
       '2807': { id: '11111111-1111-4111-8111-111111111111', email: 'ionut7628c@gmail.com', role: 'sot', label: 'Soț' },
@@ -1271,13 +1272,13 @@
         .on('postgres_changes', { event:'*', schema:'public', table:'transactions' }, scheduleSoftRefresh)
         .on('postgres_changes', { event:'*', schema:'public', table:'profiles' }, scheduleSoftRefresh)
         .on('postgres_changes', { event:'*', schema:'public', table:'calculator_history' }, scheduleSoftRefresh)
-        .on('postgres_changes', { event:'*', schema:'public', table:'game_rooms' }, scheduleSoftRefresh)
+        .on('postgres_changes', { event:'*', schema:'public', table:'game_rooms' }, () => scheduleSoftRefresh(120))
         .on('postgres_changes', { event:'*', schema:'public', table:'game_wallets' }, scheduleSoftRefresh)
         .on('postgres_changes', { event:'*', schema:'public', table:'game_transactions' }, scheduleSoftRefresh)
         .subscribe();
     }
 
-    function scheduleSoftRefresh() {
+    function scheduleSoftRefresh(delay = 450) {
       clearTimeout(refreshTimer);
       if (Date.now() < suppressSoftUntil) {
         refreshTimer = setTimeout(() => fetchData({ render: false }), Math.max(500, suppressSoftUntil - Date.now()));
@@ -1291,7 +1292,7 @@
         } else {
           fetchData({ soft: true, render: true });
         }
-      }, 900);
+      }, delay);
     }
 
     function renderApp(soft = false) {
@@ -1509,9 +1510,10 @@
       const entries = Object.entries(sums).filter(([, value]) => value > 0).sort((a, b) => b[1] - a[1]);
       if (!entries.length) return '';
       return `<div class="completed-contributions">${entries.map(([email, value]) => {
-        const role = getRole(email);
-        const cls = role === 'sotie' ? 'partner-wife' : role === 'sot' ? 'partner-husband' : '';
-        const label = roleLabel(role).toUpperCase();
+        const isGame = String(email || '').toUpperCase() === 'SOLD_JOCURI';
+        const role = isGame ? '' : getRole(email);
+        const cls = isGame ? '' : (role === 'sotie' ? 'partner-wife' : role === 'sot' ? 'partner-husband' : '');
+        const label = isGame ? 'JOCURI' : roleLabel(role).toUpperCase();
         return `<span class="contribution-chip ${cls}">${escapeHTML(label)} +${money(value)} RON</span>`;
       }).join('')}</div>`;
     }
@@ -1810,7 +1812,7 @@
       return `<div class="game-room-card mb-4" onclick="window.appActions.openFlappyRoom('${room.id}')">
         <div class="flex items-center justify-between gap-3">
           <div>
-            <p class="text-sm" style="color:var(--text)">Ultima rundă Flappy</p>
+            <p class="text-sm" style="color:var(--text)">Ultima rundă Prinde banii</p>
             <p class="text-xs muted mt-1">Pariu ${money(room.bet_amount)} RON · ${room.status === 'finished' ? winner : 'apasă pentru detalii'}</p>
           </div>
           <span class="game-pill ${pillClass}">${statusLabel}</span>
@@ -1826,8 +1828,8 @@
             <div class="game-cover">${svg.gamepad}</div>
             <div class="min-w-0">
               <p class="muted text-xs">Joc 1v1 realtime</p>
-              <h2 class="text-xl font-medium tracking-[-.03em]">Flappy duel</h2>
-              <p class="text-xs muted mt-1">Invită, puneți pariu și jucați pe telefoane diferite.</p>
+              <h2 class="text-xl font-medium tracking-[-.03em]">Prinde banii</h2>
+              <p class="text-xs muted mt-1">Invită, puneți pariu și prindeți banii în același timp.</p>
             </div>
           </div>
           <span class="game-pill live">Deschide</span>
@@ -1862,8 +1864,8 @@
       return `${backButton()}
         ${gameWalletHTML()}
         <div class="top-card mb-4">
-          <div class="flex items-center gap-3"><span class="icon-btn">${svg.gamepad}</span><div><p class="muted text-xs">Flappy duel</p><h2 class="text-2xl font-medium tracking-[-.03em]">Pariu și invitație</h2></div></div>
-          <p class="text-sm muted mt-3">Alege pariul, trimite invitația, apoi jocul începe în același timp pe ambele telefoane.</p>
+          <div class="flex items-center gap-3"><span class="icon-btn">${svg.gamepad}</span><div><p class="muted text-xs">Prinde banii</p><h2 class="text-2xl font-medium tracking-[-.03em]">Pariu și invitație</h2></div></div>
+          <p class="text-sm muted mt-3">Alege pariul, trimite invitația, apoi prindeți banii în același timp pe ambele telefoane. Bombă = -10, X2 și fulger țin 5 secunde.</p>
         </div>
         <div class="card mb-4">
           <p class="label">Pariu</p>
@@ -1875,7 +1877,7 @@
         ${waiting ? flappyRoomStatusHTML(room) : `<button class="btn btn-gold btn-full" onclick="window.appActions.sendFlappyInvite('${opponent}')">Trimite invitație</button>`}
         ${room && status === 'accepted' && isCreator ? `<button class="btn btn-gold btn-full mt-3" onclick="window.appActions.startFlappyRoom('${room.id}')">START JOC</button>` : ''}
         ${room && ['countdown','playing'].includes(status) ? `<button class="btn btn-soft btn-full mt-3" onclick="window.appActions.openFlappyRoom('${room.id}')">Intră în joc</button>` : ''}
-        ${room && status === 'finished' ? `<button class="btn btn-gold btn-full mt-3" onclick="window.appActions.resetFlappySelection()">Joacă din nou</button>` : ''}`;
+        ${room && status === 'finished' && isCreator ? `<button class="btn btn-gold btn-full mt-3" onclick="window.appActions.resetFlappySelection()">Joacă din nou</button>` : ''}`;
     }
 
     function flappyRoomStatusHTML(room) {
@@ -1908,7 +1910,7 @@
       const finished = room.status === 'finished';
       const winnerText = finished ? (room.winner_email ? `${gamePersonLabel(room.winner_email)} a câștigat ${money(room.bet_amount)} RON` : 'Egalitate') : '';
       return `${backButton()}
-        <div class="top-card mb-3"><p class="muted text-xs">Flappy duel</p><h2 class="text-2xl font-medium tracking-[-.03em]">${finished ? 'Rundă finalizată' : 'Atinge ecranul'}</h2><p class="text-sm muted mt-1">Pariu ${money(room.bet_amount)} RON ${winnerText ? '· ' + winnerText : ''}</p></div>
+        <div class="top-card mb-3"><p class="muted text-xs">Prinde banii</p><h2 class="text-2xl font-medium tracking-[-.03em]">${finished ? 'Rundă finalizată' : 'Prinde banii'}</h2><p class="text-sm muted mt-1">Pariu ${money(room.bet_amount)} RON ${winnerText ? '· ' + winnerText : ''}</p></div>
         <div class="flappy-scorebar">
           <div class="flappy-score"><span>Tu</span><b id="myFlappyScore">${myScore}</b></div>
           <div class="flappy-score"><span>${escapeHTML(gamePersonLabel(other))}</span><b id="otherFlappyScore">${otherScore}</b></div>
@@ -1918,8 +1920,9 @@
           <div id="flappyOverlay" class="flappy-overlay" style="${room.status === 'playing' ? 'display:none' : ''}">
             <div class="flappy-count" id="flappyCount">${finished ? (room.winner_email === currentUser.email ? 'Ai câștigat' : room.winner_email ? 'Ai pierdut' : 'Egal') : '3'}</div>
             <p class="text-sm mt-2" style="color:#0f172a" id="flappyMessage">${finished ? winnerText : 'Pregătește-te'}</p>
-            ${finished ? `<button class="btn btn-gold mt-4" onclick="window.appActions.resetFlappySelection()">Joacă din nou</button>` : ''}
+            ${finished && room.creator_email === currentUser.email ? `<button class="btn btn-gold mt-4" onclick="window.appActions.resetFlappySelection()">Joacă din nou</button>` : ''}
           </div>
+          ${!finished ? `<div class="catch-hint">Atinge monedele. Bomba scade 10 puncte. X2 și fulger țin 5 secunde.</div>` : ''}
         </div>`;
     }
 
@@ -1957,7 +1960,8 @@
       const amount = Number(t.amount || 0);
       const color = amount < 0 ? 'var(--danger)' : 'var(--success)';
       const piggy = isPiggyTransaction(t);
-      const text = piggy ? 'Monedă adăugată' : (amount < 0 ? 'S-a scos din' : (t.from_role === t.to_role ? 'S-a pus la' : 'S-a oferit la'));
+      const fromGame = String(t.from_role || '').toUpperCase() === 'SOLD_JOCURI';
+      const text = piggy ? 'Monedă adăugată' : (fromGame ? 'Adăugat din joc' : (amount < 0 ? 'S-a scos din' : (t.from_role === t.to_role ? 'S-a pus la' : 'S-a oferit la')));
       const title = piggy ? 'PUȘCULIȚĂ' : String(t.goal_title || '').toUpperCase();
       return `<div class="card" style="padding:11px 12px"><div class="flex items-center justify-between gap-3"><p class="text-xs muted">${text} <span style="color:var(--text)">${escapeHTML(title)}</span></p><p class="text-xs" style="color:${color}; white-space:nowrap;">${amount > 0 ? '+' : ''}${money(amount)}</p></div></div>`;
     }
@@ -2021,21 +2025,43 @@
     }
 
 
+
+    function playInviteSound() {
+      try {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContext) return;
+        const ctx = new AudioContext();
+        const gain = ctx.createGain();
+        const o1 = ctx.createOscillator();
+        const o2 = ctx.createOscillator();
+        o1.type = 'sine'; o2.type = 'triangle';
+        o1.frequency.value = 660; o2.frequency.value = 990;
+        gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.07, ctx.currentTime + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.22);
+        o1.connect(gain); o2.connect(gain); gain.connect(ctx.destination);
+        o1.start(); o2.start();
+        o1.stop(ctx.currentTime + 0.24); o2.stop(ctx.currentTime + 0.24);
+        setTimeout(() => ctx.close().catch(()=>{}), 400);
+      } catch (_) {}
+    }
+
     function maybeShowGameInvite() {
       const room = pendingInviteForMe();
       if (!room || inviteModalRoomId === room.id) return;
       if (modal.innerHTML.trim()) return;
       inviteModalRoomId = room.id;
+      playInviteSound();
       modal.innerHTML = `<div class="fixed inset-0 z-[90] flex items-center justify-center p-4" style="background:rgba(15,23,42,.48);backdrop-filter:blur(10px);">
         <div class="card w-full max-w-sm" style="padding:18px;border-radius:28px;box-shadow:0 28px 70px rgba(15,23,42,.28);">
           <div class="flex items-center gap-3 mb-4">
             <span class="icon-btn">${svg.gamepad}</span>
             <div class="min-w-0">
               <p class="muted text-xs">Invitație joc</p>
-              <h3 class="text-xl font-medium tracking-[-.03em]">Flappy Duel</h3>
+              <h3 class="text-xl font-medium tracking-[-.03em]">Prinde banii</h3>
             </div>
           </div>
-          <p class="text-sm muted mb-4">${escapeHTML(gamePersonLabel(room.creator_email))} te provoacă la un pariu de <span style="color:var(--text)">${money(room.bet_amount)} RON</span>.</p>
+          <p class="text-sm muted mb-4">${escapeHTML(gamePersonLabel(room.creator_email))} te invită la Prinde banii, pariu <span style="color:var(--text)">${money(room.bet_amount)} RON</span>.</p>
           <div class="grid grid-cols-2 gap-2">
             <button class="btn btn-soft btn-full" onclick="window.appActions.respondFlappyInvite('${room.id}', false)">Refuză</button>
             <button class="btn btn-gold btn-full" onclick="window.appActions.respondFlappyInvite('${room.id}', true)">Acceptă</button>
@@ -2069,7 +2095,8 @@
 
       const selected = selectedGameRoomId ? gameRooms.find(r => r.id === selectedGameRoomId) : null;
       if (currentPage === 'flappyGame' && selected?.status === 'finished') {
-        updateGameLiveDom();
+        stopFlappyLoop();
+        renderApp(true);
         return;
       }
 
@@ -2123,10 +2150,22 @@
       const canvas = document.getElementById('flappyCanvas');
       if (!canvas) return;
       const ctx = canvas.getContext('2d');
-      ctx.clearRect(0,0,canvas.width,canvas.height);
-      ctx.fillStyle = '#9ee7ff'; ctx.fillRect(0,0,canvas.width,canvas.height);
-      ctx.fillStyle = '#8bd46b'; ctx.fillRect(0,canvas.height-80,canvas.width,80);
-      ctx.fillStyle = '#fbbf24'; ctx.beginPath(); ctx.arc(canvas.width/2, canvas.height/2, 18, 0, Math.PI*2); ctx.fill();
+      const W = canvas.width, H = canvas.height;
+      ctx.clearRect(0, 0, W, H);
+      const grad = ctx.createLinearGradient(0, 0, 0, H);
+      grad.addColorStop(0, '#dff3ff');
+      grad.addColorStop(1, '#ffffff');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = 'rgba(37,99,235,.10)';
+      ctx.beginPath(); ctx.arc(70, 70, 38, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = 'rgba(239,68,68,.08)';
+      ctx.beginPath(); ctx.arc(W - 60, 100, 46, 0, Math.PI * 2); ctx.fill();
+      drawCatchPig(ctx, W / 2, H / 2 - 18, 1.15);
+      ctx.fillStyle = '#0f172a';
+      ctx.font = '500 18px Inter, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Prinde banii', W / 2, H / 2 + 86);
     }
 
     function stopFlappyLoop() {
@@ -2135,42 +2174,103 @@
       if (flappyState) flappyState.running = false;
     }
 
+    function drawCatchPig(ctx, x, y, s = 1) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.scale(s, s);
+      ctx.fillStyle = '#fb7185';
+      ctx.beginPath(); ctx.ellipse(0, 0, 42, 32, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#fda4af';
+      ctx.beginPath(); ctx.ellipse(20, -2, 19, 15, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#be123c';
+      ctx.beginPath(); ctx.arc(16, -4, 2.4, 0, Math.PI * 2); ctx.arc(25, -4, 2.4, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#0f172a';
+      ctx.beginPath(); ctx.arc(2, -12, 3, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#be123c'; ctx.lineWidth = 4; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(-42, -2); ctx.quadraticCurveTo(-58, -12, -48, -22); ctx.stroke();
+      ctx.strokeStyle = '#9f1239'; ctx.lineWidth = 5;
+      ctx.beginPath(); ctx.moveTo(-20, 25); ctx.lineTo(-25, 36); ctx.moveTo(12, 25); ctx.lineTo(8, 36); ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawCatchItem(ctx, item) {
+      ctx.save();
+      ctx.translate(item.x, item.y);
+      const r = item.r;
+      if (item.type === 'coin') {
+        const g = ctx.createRadialGradient(-r * .3, -r * .35, r * .1, 0, 0, r);
+        g.addColorStop(0, '#fde68a'); g.addColorStop(.55, '#facc15'); g.addColorStop(1, '#d97706');
+        ctx.fillStyle = g;
+        ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = 'rgba(120,53,15,.45)'; ctx.lineWidth = 2; ctx.stroke();
+        ctx.fillStyle = '#78350f'; ctx.font = '700 12px Inter, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(item.value >= 10 ? '10' : '5', 0, 1);
+      } else if (item.type === 'bomb') {
+        ctx.fillStyle = '#111827'; ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = '#ef4444'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, 0, r + 2, -0.8, 0.8); ctx.stroke();
+        ctx.fillStyle = '#f97316'; ctx.beginPath(); ctx.arc(r * .6, -r * .8, 5, 0, Math.PI * 2); ctx.fill();
+      } else if (item.type === 'x2') {
+        ctx.fillStyle = '#7c3aed'; ctx.beginPath(); ctx.rect(-r, -r, r * 2, r * 2); ctx.fill();
+        ctx.fillStyle = '#fff'; ctx.font = '700 16px Inter, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('X2', 0, 1);
+      } else if (item.type === 'bolt') {
+        ctx.fillStyle = '#2563eb'; ctx.beginPath(); ctx.rect(-r, -r, r * 2, r * 2); ctx.fill();
+        ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.moveTo(-2, -13); ctx.lineTo(10, -2); ctx.lineTo(2, -2); ctx.lineTo(8, 13); ctx.lineTo(-10, -1); ctx.lineTo(-1, -1); ctx.closePath(); ctx.fill();
+      }
+      ctx.restore();
+    }
+
     function startFlappyLocal(roomId) {
       const canvas = document.getElementById('flappyCanvas');
       if (!canvas || (flappyState?.roomId === roomId && flappyState.running)) return;
       stopFlappyLoop();
       const ctx = canvas.getContext('2d');
+      const makeThresholds = (base) => base.map(v => v + Math.floor(Math.random() * 12 - 6));
       const state = {
         roomId,
-        running:true,
-        ended:false,
-        bird:{ x:86, y:220, v:0, r:14 },
-        pipes:[],
-        score:0,
-        frame:0,
-        lastRpcScore:0,
-        gravity:.34,
-        flap:-6.2
+        running: true,
+        ended: false,
+        score: 0,
+        displayScore: 0,
+        frame: 0,
+        items: [],
+        lastRpcScore: 0,
+        x2Until: 0,
+        speedUntil: 0,
+        x2Thresholds: makeThresholds([18, 48, 78]),
+        speedThresholds: makeThresholds([28, 58, 88]),
+        x2Index: 0,
+        speedIndex: 0,
+        lastSpawnX: -999
       };
       flappyState = state;
       const overlay = document.getElementById('flappyOverlay');
       if (overlay) overlay.style.display = 'none';
-      const flap = () => { if (state.running && !state.ended) state.bird.v = state.flap; };
-      canvas.onpointerdown = (e) => { e.preventDefault(); flap(); };
-      window.onkeydown = (e) => { if (currentPage === 'flappyGame' && (e.code === 'Space' || e.key === 'ArrowUp')) { e.preventDefault(); flap(); } };
+
+      const updateScoreDom = () => {
+        const my = document.getElementById('myFlappyScore');
+        if (my) my.textContent = Math.max(0, Math.min(100, Math.round(state.score)));
+      };
+
+      const sendScore = () => {
+        const s = Math.max(0, Math.min(100, Math.round(state.score)));
+        if (s !== state.lastRpcScore) {
+          state.lastRpcScore = s;
+          supabase.rpc('update_catch_money_score', { p_room_id: roomId, p_player_email: currentUser.email, p_score: s }).then(()=>{});
+        }
+      };
 
       const finish = async () => {
         if (state.ended) return;
         state.ended = true;
         state.running = false;
+        updateScoreDom();
         const ov = document.getElementById('flappyOverlay');
         const cnt = document.getElementById('flappyCount');
         const msg = document.getElementById('flappyMessage');
         if (ov) ov.style.display = 'flex';
-        if (cnt) cnt.textContent = 'Gata';
-        if (msg) msg.textContent = 'Așteptăm rezultatul final...';
+        if (cnt) cnt.textContent = '100';
+        if (msg) msg.textContent = 'Ai terminat primul? Verificăm rezultatul...';
         try {
-          const res = await supabase.rpc('finish_flappy_player', { p_room_id: roomId, p_player_email: currentUser.email, p_score: state.score });
+          const res = await supabase.rpc('finish_catch_money_player', { p_room_id: roomId, p_player_email: currentUser.email, p_score: 100 });
           if (res.error) throw res.error;
           await fetchData({ soft:true, render:true });
         } catch (err) {
@@ -2178,56 +2278,94 @@
         }
       };
 
+      const spawnItem = (type = 'coin') => {
+        const W = canvas.width;
+        let x = 32 + Math.random() * (W - 64);
+        if (Math.abs(x - state.lastSpawnX) < 56) x = x < W / 2 ? x + 70 : x - 70;
+        state.lastSpawnX = x;
+        const baseSpeed = Date.now() < state.speedUntil ? 4.8 : 3.0;
+        const item = {
+          type,
+          x,
+          y: -30,
+          r: type === 'coin' ? 20 : type === 'bomb' ? 19 : 22,
+          v: baseSpeed + Math.random() * 1.35,
+          value: 5
+        };
+        state.items.push(item);
+      };
+
+      const hitItem = (clientX, clientY) => {
+        if (!state.running || state.ended) return;
+        const rect = canvas.getBoundingClientRect();
+        const x = (clientX - rect.left) * (canvas.width / rect.width);
+        const y = (clientY - rect.top) * (canvas.height / rect.height);
+        let bestIndex = -1;
+        let bestDist = Infinity;
+        state.items.forEach((it, idx) => {
+          const d = Math.hypot(x - it.x, y - it.y);
+          if (d < it.r + 20 && d < bestDist) { bestDist = d; bestIndex = idx; }
+        });
+        if (bestIndex < 0) return;
+        const item = state.items.splice(bestIndex, 1)[0];
+        const now = Date.now();
+        if (item.type === 'coin') {
+          const mult = now < state.x2Until ? 2 : 1;
+          state.score = Math.min(100, state.score + item.value * mult);
+        } else if (item.type === 'bomb') {
+          state.score = Math.max(0, state.score - 10);
+        } else if (item.type === 'x2') {
+          state.x2Until = now + 5000;
+        } else if (item.type === 'bolt') {
+          state.speedUntil = now + 5000;
+        }
+        updateScoreDom();
+        sendScore();
+        if (state.score >= 100) finish();
+      };
+
+      canvas.onpointerdown = (e) => { e.preventDefault(); hitItem(e.clientX, e.clientY); };
+      window.onkeydown = null;
+
       const loop = () => {
         if (!state.running) return;
         const W = canvas.width, H = canvas.height;
-        ctx.clearRect(0,0,W,H);
-        ctx.fillStyle = '#9ee7ff'; ctx.fillRect(0,0,W,H);
-        ctx.fillStyle = 'rgba(255,255,255,.65)';
-        ctx.beginPath(); ctx.arc(55,70,22,0,Math.PI*2); ctx.arc(78,72,28,0,Math.PI*2); ctx.arc(104,70,20,0,Math.PI*2); ctx.fill();
-
+        const now = Date.now();
         state.frame++;
-        state.bird.v += state.gravity;
-        state.bird.y += state.bird.v;
-        if (state.frame % 92 === 0) {
-          const gap = 138;
-          const top = 70 + Math.random() * 230;
-          state.pipes.push({ x:W + 20, top, gap, passed:false });
-        }
-        ctx.fillStyle = '#22c55e';
-        state.pipes.forEach(pipe => {
-          pipe.x -= 2.35;
-          ctx.fillRect(pipe.x, 0, 54, pipe.top);
-          ctx.fillRect(pipe.x, pipe.top + pipe.gap, 54, H - 80 - (pipe.top + pipe.gap));
-          ctx.fillStyle = '#16a34a';
-          ctx.fillRect(pipe.x - 4, pipe.top - 16, 62, 16);
-          ctx.fillRect(pipe.x - 4, pipe.top + pipe.gap, 62, 16);
-          ctx.fillStyle = '#22c55e';
-          if (!pipe.passed && pipe.x + 54 < state.bird.x) {
-            pipe.passed = true;
-            state.score++;
-            const my = document.getElementById('myFlappyScore');
-            if (my) my.textContent = state.score;
-            if (state.score !== state.lastRpcScore) {
-              state.lastRpcScore = state.score;
-              supabase.rpc('update_flappy_score', { p_room_id: roomId, p_player_email: currentUser.email, p_score: state.score }).then(()=>{});
-            }
-          }
-        });
-        state.pipes = state.pipes.filter(p => p.x > -70);
-        ctx.fillStyle = '#7ccf55'; ctx.fillRect(0,H-80,W,80);
-        ctx.fillStyle = '#5dbb45'; ctx.fillRect(0,H-80,W,10);
-        ctx.fillStyle = '#fbbf24'; ctx.beginPath(); ctx.arc(state.bird.x,state.bird.y,state.bird.r,0,Math.PI*2); ctx.fill();
-        ctx.fillStyle = '#111827'; ctx.beginPath(); ctx.arc(state.bird.x+5,state.bird.y-5,3,0,Math.PI*2); ctx.fill();
-        ctx.fillStyle = '#fb923c'; ctx.beginPath(); ctx.moveTo(state.bird.x+14,state.bird.y); ctx.lineTo(state.bird.x+28,state.bird.y+5); ctx.lineTo(state.bird.x+14,state.bird.y+10); ctx.closePath(); ctx.fill();
+        const speedMode = now < state.speedUntil;
+        const x2Mode = now < state.x2Until;
+        const spawnEvery = speedMode ? 20 : 30;
+        if (state.frame % spawnEvery === 0) spawnItem('coin');
+        if (state.frame % 92 === 0) spawnItem('bomb');
+        if (state.x2Index < 3 && state.score >= state.x2Thresholds[state.x2Index]) { state.x2Index++; spawnItem('x2'); }
+        if (state.speedIndex < 3 && state.score >= state.speedThresholds[state.speedIndex]) { state.speedIndex++; spawnItem('bolt'); }
 
-        let hit = state.bird.y - state.bird.r < 0 || state.bird.y + state.bird.r > H - 80;
-        for (const p of state.pipes) {
-          const inX = state.bird.x + state.bird.r > p.x && state.bird.x - state.bird.r < p.x + 54;
-          const inGap = state.bird.y - state.bird.r > p.top && state.bird.y + state.bird.r < p.top + p.gap;
-          if (inX && !inGap) { hit = true; break; }
+        const grad = ctx.createLinearGradient(0, 0, 0, H);
+        grad.addColorStop(0, '#dff3ff'); grad.addColorStop(1, '#ffffff');
+        ctx.fillStyle = grad; ctx.fillRect(0, 0, W, H);
+        ctx.fillStyle = 'rgba(37,99,235,.08)';
+        ctx.beginPath(); ctx.arc(60, 65, 38, 0, Math.PI * 2); ctx.arc(W - 58, 94, 46, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = 'rgba(15,23,42,.04)';
+        ctx.fillRect(0, H - 70, W, 70);
+
+        state.items.forEach(it => {
+          it.y += it.v + (speedMode ? 1.25 : 0);
+          drawCatchItem(ctx, it);
+        });
+        state.items = state.items.filter(it => it.y < H + 45);
+
+        ctx.fillStyle = 'rgba(15,23,42,.78)';
+        ctx.font = '500 15px Inter, sans-serif';
+        ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+        ctx.fillText('Scor ' + Math.round(state.score) + ' / 100', 16, 16);
+        if (x2Mode || speedMode) {
+          const labels = [];
+          if (x2Mode) labels.push('X2 ' + Math.ceil((state.x2Until - now) / 1000) + 's');
+          if (speedMode) labels.push('FULGER ' + Math.ceil((state.speedUntil - now) / 1000) + 's');
+          ctx.textAlign = 'right';
+          ctx.fillText(labels.join(' · '), W - 16, 16);
         }
-        if (hit) { finish(); return; }
+
         flappyLoop = requestAnimationFrame(loop);
       };
       flappyLoop = requestAnimationFrame(loop);
@@ -2614,7 +2752,7 @@
         if (!activeGoals.length) return alert('Nu există niciun obiectiv activ în care să retragi banii.');
         modal.innerHTML = `<div class="modal-backdrop"><div class="sheet"><div class="grab"></div>
           <h3 class="text-xl font-medium mb-1">Retrage din Sold Jocuri</h3>
-          <p class="text-sm muted mb-4">Alege obiectivul și suma pe care vrei să o muți.</p>
+          <p class="text-sm muted mb-4">Alege obiectivul și suma pe care vrei să o muți din Sold Jocuri.</p>
           <div class="space-y-3">
             <div><p class="label">Obiectiv</p><select id="gameWithdrawGoalInput" class="input">${activeGoals.map(g => {
               const remaining = Math.max(0, Number(g.target || 0) - Number(g.current || 0));
