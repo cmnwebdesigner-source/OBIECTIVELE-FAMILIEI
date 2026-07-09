@@ -772,9 +772,9 @@
     .piggy-main { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px; }
     .piggy-title-row { display:flex; align-items:center; gap:10px; min-width:0; }
     .piggy-badge {
-      width:42px;
-      height:42px;
-      border-radius:17px;
+      width:56px;
+      height:56px;
+      border-radius:22px;
       display:flex;
       align-items:center;
       justify-content:center;
@@ -783,6 +783,7 @@
       box-shadow:0 12px 22px rgba(37,99,235,.20);
       flex-shrink:0;
     }
+    .piggy-badge svg { width:32px; height:32px; }
     .piggy-title { font-size:14px; font-weight:450; letter-spacing:-.02em; color:var(--text); }
     .piggy-msg { font-size:11px; color:var(--muted); line-height:1.35; margin-top:3px; max-width:235px; }
     .piggy-amount { text-align:right; flex-shrink:0; }
@@ -935,6 +936,7 @@
     let swipeMoved = false;
     let completedHold = {};
     let completedNotified = new Set();
+    let confettiTransactionNotified = new Set();
     let dataLoadedOnce = false;
     let familyCode = '';
     let familyCodeStatus = '';
@@ -991,7 +993,7 @@
     const formatMonthTitle = (dateStr) => new Date(dateStr + 'T12:00:00').toLocaleDateString('ro-RO', { month:'long', year:'numeric' });
     const firstOfMonth = (dateStr) => { const d = new Date(dateStr + 'T12:00:00'); return new Date(d.getFullYear(), d.getMonth(), 1, 12).toISOString().split('T')[0]; };
     const shiftMonth = (dateStr, months) => { const d = new Date(dateStr + 'T12:00:00'); d.setMonth(d.getMonth() + months, 1); return d.toISOString().split('T')[0]; };
-    const hasMoneyOnDate = (dateStr) => transactions.some(t => transactionBelongsToFamily(t) && String(t.date).slice(0,10) === dateStr && Number(t.amount || 0) > 0);
+    const hasMoneyOnDate = (dateStr) => visibleTransactions().some(t => transactionBelongsToFamily(t) && String(t.date).slice(0,10) === dateStr && Number(t.amount || 0) > 0);
     const getProfile = (email) => profiles.find(p => p.email === email);
     const getRole = (email) => email === currentUser?.email ? (getProfile(email)?.role || currentUser?.user_metadata?.role || 'sot') : (getProfile(email)?.role || 'sotie');
     const roleLabel = (role) => role === 'sotie' ? 'Soție' : 'Soț';
@@ -1008,7 +1010,10 @@
       { target: 100, message: 'Provocarea e completă. Micile gesturi au devenit ceva mare.' }
     ];
     const isPiggyTransaction = (t) => transactionBelongsToFamily(t) && !t.goal_id && String(t.goal_title || '').toLocaleUpperCase('ro-RO') === PIGGY_TITLE;
+    const isHiddenInHistory = (t) => t?.hidden_in_history === true || String(t?.hidden_in_history || '').toLowerCase() === 'true';
+    const visibleTransactions = () => transactions.filter(t => !isHiddenInHistory(t));
     const piggyTransactions = () => transactions.filter(isPiggyTransaction);
+    const piggyHistoryTransactions = () => piggyTransactions().filter(t => !isHiddenInHistory(t));
     const piggyBalance = () => fromCents(Math.max(0, piggyTransactions().reduce((s, t) => s + toCents(t.amount || 0), 0)));
     const piggyInfo = (balance) => {
       const finalTarget = PIGGY_MILESTONES[PIGGY_MILESTONES.length - 1].target;
@@ -1058,6 +1063,8 @@
       if (!currentUser) return;
 
       const oldCompleted = new Set(goals.filter(isGoalDone).map(g => g.id));
+      const oldPiggyBalance = dataLoadedOnce ? piggyBalance() : 0;
+      const oldTransactionIds = new Set(transactions.map(t => t.id));
 
       const [g, t, p, c] = await Promise.all([
         safeFetch(supabase.from('goals').select('*').order('created_at', { ascending: false })),
@@ -1077,11 +1084,19 @@
       const filteredTransactions = t.filter(transactionBelongsToFamily);
 
       const newlyCompleted = [];
+      let piggyNeedsConfetti = false;
       if (dataLoadedOnce) {
         for (const goal of filteredGoals) {
           if (isGoalDone(goal) && !oldCompleted.has(goal.id) && !completedNotified.has(goal.id)) {
             newlyCompleted.push(goal);
           }
+        }
+        const nextPiggyBalance = fromCents(Math.max(0, filteredTransactions.filter(isPiggyTransaction).reduce((sum, tr) => sum + toCents(tr.amount || 0), 0)));
+        const crossedPiggyMilestone = PIGGY_MILESTONES.some(m => toCents(oldPiggyBalance) < toCents(m.target) && toCents(nextPiggyBalance) >= toCents(m.target));
+        const newPiggyBreak = filteredTransactions.some(tr => isPiggyTransaction(tr) && Number(tr.amount || 0) < 0 && !oldTransactionIds.has(tr.id) && !confettiTransactionNotified.has(tr.id));
+        if (crossedPiggyMilestone || newPiggyBreak) {
+          piggyNeedsConfetti = true;
+          filteredTransactions.filter(tr => isPiggyTransaction(tr) && !oldTransactionIds.has(tr.id)).forEach(tr => confettiTransactionNotified.add(tr.id));
         }
       }
 
@@ -1101,6 +1116,9 @@
         // Confetti apare pe ambele conturi când un obiectiv se finalizează prin realtime.
         newlyCompleted.forEach(goal => markGoalCompleted(goal, { render: false }));
         if (currentPage === 'home') renderApp(true);
+      }
+      if (piggyNeedsConfetti) {
+        setTimeout(showConfetti, 160);
       }
     }
 
@@ -1179,7 +1197,7 @@
       const myGoals = goals.filter(g => !isCommonGoal(g) && g.owner === currentUser.email && goalBelongsToFamily(g) && showCompletedOnHome(g));
       const commonGoals = goals.filter(g => isCommonGoal(g) && goalBelongsToFamily(g) && showCompletedOnHome(g));
       const otherGoals = goals.filter(g => !isCommonGoal(g) && g.owner !== currentUser.email && goalBelongsToFamily(g) && showCompletedOnHome(g));
-      const todayTransactions = transactions.filter(t => transactionBelongsToFamily(t) && String(t.date).slice(0,10) === todayISO()).slice(0,3);
+      const todayTransactions = visibleTransactions().filter(t => transactionBelongsToFamily(t) && String(t.date).slice(0,10) === todayISO()).slice(0,3);
       const offered = transactions.filter(t => transactionBelongsToFamily(t) && t.from_role === currentUser.email && t.to_role !== currentUser.email).reduce((s,t) => s + Math.max(0, Number(t.amount || 0)), 0);
       const received = transactions.filter(t => transactionBelongsToFamily(t) && t.to_role === currentUser.email && t.from_role !== currentUser.email).reduce((s,t) => s + Math.max(0, Number(t.amount || 0)), 0);
       const partnerLabel = myRole === 'sot' ? 'Soției' : 'Soțului';
@@ -1277,7 +1295,7 @@
     function piggyPageHTML() {
       const balance = piggyBalance();
       const info = piggyInfo(balance);
-      const history = piggyTransactions().slice().sort((a,b) => new Date(b.timestamp || b.created_at || 0) - new Date(a.timestamp || a.created_at || 0));
+      const history = piggyHistoryTransactions().slice().sort((a,b) => new Date(b.timestamp || b.created_at || 0) - new Date(a.timestamp || a.created_at || 0));
       const breakHistory = history.filter(t => Number(t.amount || 0) < 0);
       const coinHistory = history.filter(t => Number(t.amount || 0) > 0);
       const milestones = PIGGY_MILESTONES.map(m => {
@@ -1362,7 +1380,7 @@
           <div class="flex items-center justify-between mt-3 gap-3">
             <span class="text-xs muted shrink-0">${percent}%</span>
             <div class="flex gap-2 flex-wrap justify-end">
-              ${done ? `<span class="done-message">Obiectiv finalizat</span>` : (common ? `<button class="btn btn-gold" onclick="event.stopPropagation(); window.appActions.openMoney('${goal.id}','add')">Pune</button>${canEdit ? `<button class="btn btn-soft" onclick="event.stopPropagation(); window.appActions.openMoney('${goal.id}','remove')">Scoate</button><button class="btn btn-soft" onclick="event.stopPropagation(); window.appActions.openEditGoal('${goal.id}')">Editează</button>` : ''}` : (isMine ? `<button class="btn btn-gold" onclick="event.stopPropagation(); window.appActions.openMoney('${goal.id}','add')">Pune</button><button class="btn btn-soft" onclick="event.stopPropagation(); window.appActions.openMoney('${goal.id}','remove')">Scoate</button><button class="btn btn-soft" onclick="event.stopPropagation(); window.appActions.openEditGoal('${goal.id}')">Editează</button>` : `<button class="btn btn-gold" onclick="event.stopPropagation(); window.appActions.openMoney('${goal.id}','gift')">Oferă</button>`))}
+              ${done ? `<span class="done-message">Obiectiv finalizat</span>${canEdit ? `<button class="btn btn-soft" onclick="event.stopPropagation(); window.appActions.deleteGoal('${goal.id}')">Șterge</button>` : ''}` : (common ? `<button class="btn btn-gold" onclick="event.stopPropagation(); window.appActions.openMoney('${goal.id}','add')">Pune</button>${canEdit ? `<button class="btn btn-soft" onclick="event.stopPropagation(); window.appActions.openMoney('${goal.id}','remove')">Scoate</button><button class="btn btn-soft" onclick="event.stopPropagation(); window.appActions.openEditGoal('${goal.id}')">Editează</button>` : ''}` : (isMine ? `<button class="btn btn-gold" onclick="event.stopPropagation(); window.appActions.openMoney('${goal.id}','add')">Pune</button><button class="btn btn-soft" onclick="event.stopPropagation(); window.appActions.openMoney('${goal.id}','remove')">Scoate</button><button class="btn btn-soft" onclick="event.stopPropagation(); window.appActions.openEditGoal('${goal.id}')">Editează</button>` : `<button class="btn btn-gold" onclick="event.stopPropagation(); window.appActions.openMoney('${goal.id}','gift')">Oferă</button>`))}
             </div>
           </div>
         </div>`;
@@ -1403,7 +1421,7 @@
     }
 
     function calendarPageHTML() {
-      const selectedTransactions = transactions.filter(t => transactionBelongsToFamily(t) && String(t.date).slice(0,10) === selectedDate);
+      const selectedTransactions = visibleTransactions().filter(t => transactionBelongsToFamily(t) && String(t.date).slice(0,10) === selectedDate);
       const totalDay = selectedTransactions.reduce((s,t) => s + Number(t.amount || 0), 0);
       return `
         ${backButton()}
@@ -1562,7 +1580,7 @@
       const dates = Object.keys(byDate).sort((a,b) => b.localeCompare(a));
       return `
         ${backButton()}
-        <div class="top-card mb-4"><p class="muted text-xs">Statistici</p><h2 class="text-2xl font-medium tracking-[-.03em]">${escapeHTML(String(goal.title || '').toUpperCase())}</h2><p class="muted text-sm mt-1">${money(current)} din ${money(target)} RON</p><div class="progress mt-4 ${percent>=100?'done':''}"><span style="width:${percent}%"></span></div>${percent >= 100 ? completedContributionHTML(goal) : ''}${goal.owner === currentUser.email && percent < 100 ? `<button class="btn btn-soft btn-full mt-3" onclick="window.appActions.openEditGoal('${goal.id}')">Editează obiectivul</button>` : ''}</div>
+        <div class="top-card mb-4"><p class="muted text-xs">Statistici</p><h2 class="text-2xl font-medium tracking-[-.03em]">${escapeHTML(String(goal.title || '').toUpperCase())}</h2><p class="muted text-sm mt-1">${money(current)} din ${money(target)} RON</p><div class="progress mt-4 ${percent>=100?'done':''}"><span style="width:${percent}%"></span></div>${percent >= 100 ? completedContributionHTML(goal) : ''}${goal.owner === currentUser.email && percent < 100 ? `<button class="btn btn-soft btn-full mt-3" onclick="window.appActions.openEditGoal('${goal.id}')">Editează obiectivul</button>` : ''}${goal.owner === currentUser.email && percent >= 100 ? `<button class="btn btn-soft btn-full mt-3" onclick="window.appActions.deleteGoal('${goal.id}')">Șterge obiectivul finalizat</button>` : ''}</div>
         <div class="stat-grid mb-4"><div class="stat-mini"><span>Pus</span><b>${money(added)}</b></div><div class="stat-mini"><span>Scos</span><b>${money(removed)}</b></div><div class="stat-mini"><span>Mișcări</span><b>${list.length}</b></div></div>
         <div class="section"><div class="section-head"><span>Pe zile</span>${list.length ? `<button class="clear-history-btn" onclick="window.appActions.clearGoalHistory('${goal.id}')">Șterge istoric</button>` : ``}</div><div class="space-y-3">${dates.length ? dates.map(d => `<div class="card"><div class="flex justify-between mb-2"><span class="text-sm capitalize">${formatFullDate(d)}</span><span class="text-sm muted">${byDate[d].length}</span></div><div class="space-y-2">${byDate[d].map(transactionRow).join('')}</div></div>`).join('') : emptyHTML('Nu există încă statistici.')}</div></div>`;
     }
@@ -1863,7 +1881,8 @@
           to_role: g.owner,
           date: todayISO(),
           timestamp: new Date().toISOString(),
-          family_code: familyCode
+          family_code: familyCode,
+          hidden_in_history: false
         };
         transactions.unshift(localTransaction);
         this.closeModal();
@@ -1918,7 +1937,8 @@
           to_role: currentUser.email,
           date: todayISO(),
           timestamp: nowIso,
-          family_code: familyCode
+          family_code: familyCode,
+          hidden_in_history: false
         };
 
         transactions.unshift(localTransaction);
@@ -1935,7 +1955,8 @@
             to_role: currentUser.email,
             date: todayISO(),
             timestamp: nowIso,
-            family_code: familyCode
+            family_code: familyCode,
+            hidden_in_history: false
           }]).select('*').maybeSingle();
 
           if (tr.error) throw tr.error;
@@ -1966,7 +1987,8 @@
           to_role: currentUser.email,
           date: todayISO(),
           timestamp: new Date().toISOString(),
-          family_code: familyCode
+          family_code: familyCode,
+          hidden_in_history: false
         };
         transactions.unshift(localTransaction);
         suppressSoftUntil = Date.now() + 1300;
@@ -1981,7 +2003,8 @@
             to_role: currentUser.email,
             date: todayISO(),
             timestamp: new Date().toISOString(),
-            family_code: familyCode
+            family_code: familyCode,
+            hidden_in_history: false
           }]).select('*').maybeSingle();
           if (tr.error) throw tr.error;
           if (tr.data) transactions = transactions.map(t => t.id === localTransaction.id ? tr.data : t);
@@ -2085,16 +2108,30 @@
       },
       async clearDayHistory(event) {
         if (event) event.stopPropagation();
-        const ids = transactions
-          .filter(t => transactionBelongsToFamily(t) && String(t.date).slice(0,10) === selectedDate)
+        const ids = visibleTransactions()
+          .filter(t => transactionBelongsToFamily(t) && !isPiggyTransaction(t) && String(t.date).slice(0,10) === selectedDate)
           .map(t => t.id);
         await window.appActions.deleteTransactionsByIds(ids, 'istoric zi');
       },
       async clearPiggyHistory(type) {
-        const ids = piggyTransactions()
+        const ids = piggyHistoryTransactions()
           .filter(t => type === 'break' ? Number(t.amount || 0) < 0 : Number(t.amount || 0) > 0)
-          .map(t => t.id);
-        await window.appActions.deleteTransactionsByIds(ids, 'istoric pușculiță');
+          .map(t => t.id)
+          .filter(id => id && !String(id).startsWith('local-'));
+        if (!ids.length) return;
+        if (!confirm('Ștergi doar afișarea acestui istoric? Suma din pușculiță rămâne neschimbată.')) return;
+        const before = transactions.slice();
+        transactions = transactions.map(t => ids.includes(t.id) ? { ...t, hidden_in_history: true } : t);
+        suppressSoftUntil = Date.now() + 900;
+        renderApp(true);
+        const { error } = await supabase.from('transactions').update({ hidden_in_history: true }).in('id', ids);
+        if (error) {
+          transactions = before;
+          renderApp(true);
+          alert('Eroare la ștergere istoric pușculiță: ' + error.message);
+          return;
+        }
+        scheduleSoftRefresh();
       },
       async clearGoalHistory(goalId) {
         const ids = transactions
