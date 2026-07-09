@@ -566,6 +566,63 @@
     .profile-goal-title { display:flex; align-items:center; justify-content:space-between; margin:0 2px 10px; font-size:14px; color:var(--text); font-weight:500; }
     .profile-goal-title small { color:var(--muted); font-size:11px; }
 
+  
+
+    /* PATCH: card bani mai ingust si curat */
+    .summary-hero.compact-money {
+      padding: 12px;
+      border-radius: 24px;
+      margin: 12px 0 18px;
+      background: rgba(255,255,255,.92);
+      border: 1px solid rgba(15,23,42,.07);
+      box-shadow: 0 12px 28px rgba(15,23,42,.07), inset 0 1px 0 rgba(255,255,255,.92);
+    }
+    .summary-hero.compact-money:before { display:none; }
+    .summary-hero.compact-money .summary-grid {
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 9px;
+    }
+    .summary-hero.compact-money .summary-tile {
+      min-height: 70px;
+      padding: 12px 12px 11px;
+      border-radius: 18px;
+      box-shadow: none;
+    }
+    .summary-hero.compact-money .summary-tile.offered {
+      background: linear-gradient(145deg, rgba(239,68,68,.12), rgba(255,255,255,.94));
+      border-color: rgba(239,68,68,.16);
+    }
+    .summary-hero.compact-money .summary-tile.received {
+      background: linear-gradient(145deg, rgba(22,163,74,.13), rgba(255,255,255,.94));
+      border-color: rgba(22,163,74,.16);
+    }
+    .summary-hero.compact-money .summary-label {
+      font-size: 12px;
+      margin: 0 0 6px;
+      color: var(--text);
+      font-weight: 500;
+    }
+    .summary-hero.compact-money .summary-tile.offered .summary-label { color:#dc2626; }
+    .summary-hero.compact-money .summary-tile.received .summary-label { color:#15803d; }
+    .summary-hero.compact-money .summary-value {
+      font-size: 18px;
+      line-height: 1.05;
+      font-weight: 450;
+      letter-spacing: -.03em;
+    }
+    .summary-hero.compact-money .summary-tile.offered .summary-value { color:#dc2626; }
+    .summary-hero.compact-money .summary-tile.received .summary-value { color:#15803d; }
+    body.dark-mode .summary-hero.compact-money { background: rgba(15,23,42,.90); border-color: rgba(255,255,255,.08); }
+    body.dark-mode .summary-hero.compact-money .summary-tile.offered { background: linear-gradient(145deg, rgba(239,68,68,.16), rgba(15,23,42,.74)); }
+    body.dark-mode .summary-hero.compact-money .summary-tile.received { background: linear-gradient(145deg, rgba(22,163,74,.16), rgba(15,23,42,.74)); }
+    body.dark-mode .summary-hero.compact-money .summary-tile.offered .summary-label,
+    body.dark-mode .summary-hero.compact-money .summary-tile.offered .summary-value { color:#f87171; }
+    body.dark-mode .summary-hero.compact-money .summary-tile.received .summary-label,
+    body.dark-mode .summary-hero.compact-money .summary-tile.received .summary-value { color:#4ade80; }
+
+    .edit-goal-hint { font-size: 11px; color: var(--muted); line-height: 1.4; margin-top: 4px; }
+
   </style>
 </head>
 <body>
@@ -759,24 +816,15 @@
           </div>
         </div>
 
-        <div class="summary-hero">
-          <div class="summary-hero-top">
-            <div>
-              <p class="summary-sub">Rezumat familie</p>
-              <h3 class="summary-title">Banii dintre voi</h3>
-            </div>
-            <button class="summary-pill" onclick="window.appActions.openCalendar()">Calendar</button>
-          </div>
+        <div class="summary-hero compact-money">
           <div class="summary-grid">
             <div class="summary-tile offered">
-              <div class="summary-icon red">${svg.back}</div>
               <p class="summary-label">Ai oferit</p>
-              <p class="summary-value">${money(offered)} <span class="text-xs muted">RON</span></p>
+              <p class="summary-value">${money(offered)} <span class="text-xs">RON</span></p>
             </div>
             <div class="summary-tile received">
-              <div class="summary-icon green" style="transform:rotate(180deg)">${svg.back}</div>
               <p class="summary-label">Ai primit</p>
-              <p class="summary-value">${money(received)} <span class="text-xs muted">RON</span></p>
+              <p class="summary-value">${money(received)} <span class="text-xs">RON</span></p>
             </div>
           </div>
         </div>
@@ -819,7 +867,7 @@
           <div class="flex items-center justify-between mt-3 gap-3">
             <span class="text-xs muted shrink-0">${percent}%</span>
             <div class="flex gap-2 flex-wrap justify-end">
-              ${done ? `<span class="done-message">Obiectiv finalizat</span>` : (isMine ? `<button class="btn btn-gold" onclick="event.stopPropagation(); window.appActions.openMoney('${goal.id}','add')">Pune</button><button class="btn btn-soft" onclick="event.stopPropagation(); window.appActions.openMoney('${goal.id}','remove')">Scoate</button>` : `<button class="btn btn-gold" onclick="event.stopPropagation(); window.appActions.openMoney('${goal.id}','gift')">Oferă</button>`)}
+              ${done ? `<span class="done-message">Obiectiv finalizat</span>` : (isMine ? `<button class="btn btn-gold" onclick="event.stopPropagation(); window.appActions.openMoney('${goal.id}','add')">Pune</button><button class="btn btn-soft" onclick="event.stopPropagation(); window.appActions.openMoney('${goal.id}','remove')">Scoate</button><button class="btn btn-soft" onclick="event.stopPropagation(); window.appActions.openEditGoal('${goal.id}')">Editează</button>` : `<button class="btn btn-gold" onclick="event.stopPropagation(); window.appActions.openMoney('${goal.id}','gift')">Oferă</button>`)}
             </div>
           </div>
         </div>`;
@@ -958,7 +1006,7 @@
       const dates = Object.keys(byDate).sort((a,b) => b.localeCompare(a));
       return `
         ${backButton()}
-        <div class="top-card mb-4"><p class="muted text-xs">Statistici</p><h2 class="text-2xl font-medium tracking-[-.03em]">${escapeHTML(String(goal.title || '').toUpperCase())}</h2><p class="muted text-sm mt-1">${money(current)} din ${money(target)} RON</p><div class="progress mt-4 ${percent>=100?'done':''}"><span style="width:${percent}%"></span></div></div>
+        <div class="top-card mb-4"><p class="muted text-xs">Statistici</p><h2 class="text-2xl font-medium tracking-[-.03em]">${escapeHTML(String(goal.title || '').toUpperCase())}</h2><p class="muted text-sm mt-1">${money(current)} din ${money(target)} RON</p><div class="progress mt-4 ${percent>=100?'done':''}"><span style="width:${percent}%"></span></div>${goal.owner === currentUser.email && percent < 100 ? `<button class="btn btn-soft btn-full mt-3" onclick="window.appActions.openEditGoal('${goal.id}')">Editează obiectivul</button>` : ''}</div>
         <div class="stat-grid mb-4"><div class="stat-mini"><span>Pus</span><b>${money(added)}</b></div><div class="stat-mini"><span>Scos</span><b>${money(removed)}</b></div><div class="stat-mini"><span>Mișcări</span><b>${list.length}</b></div></div>
         <div class="section"><div class="section-head"><span>Pe zile</span></div><div class="space-y-3">${dates.length ? dates.map(d => `<div class="card"><div class="flex justify-between mb-2"><span class="text-sm capitalize">${formatFullDate(d)}</span><span class="text-sm muted">${byDate[d].length}</span></div><div class="space-y-2">${byDate[d].map(transactionRow).join('')}</div></div>`).join('') : emptyHTML('Nu există încă statistici.')}</div></div>`;
     }
@@ -1080,12 +1128,51 @@
           alert('Eroare la obiectiv: ' + (error.message || error));
         }
       },
+      openEditGoal(id) {
+        const g = goals.find(x => x.id === id); if (!g) return;
+        if (g.owner !== currentUser.email) return alert('Poți edita doar obiectivul tău.');
+        if (isGoalDone(g)) return alert('Obiectiv finalizat. Nu mai poate fi editat.');
+        modal.innerHTML = `<div class="modal-backdrop"><div class="sheet"><div class="grab"></div><h3 class="text-xl font-medium mb-1">Editează obiectivul</h3><p class="text-sm muted mb-2">${escapeHTML(String(g.title || '').toUpperCase())}</p><p class="edit-goal-hint">Mărește suma obiectivului și apasă Salvează. Suma nouă trebuie să fie mai mare decât ${money(g.target)} RON.</p><div class="space-y-3 mt-4"><input id="editGoalTargetInput" type="number" class="input" placeholder="Suma nouă" value="${Number(g.target || 0)}"><div class="grid grid-cols-2 gap-2 pt-2"><button class="btn btn-soft btn-full" onclick="window.appActions.closeModal()">Anulează</button><button id="editGoalBtn" class="btn btn-gold btn-full" onclick="window.appActions.saveEditGoalTarget('${id}')">Salvează</button></div></div></div></div>`;
+      },
+      async saveEditGoalTarget(id) {
+        const g = goals.find(x => x.id === id); if (!g) return;
+        if (g.owner !== currentUser.email) return alert('Poți edita doar obiectivul tău.');
+        if (isGoalDone(g)) return alert('Obiectiv finalizat. Nu mai poate fi editat.');
+        const oldTarget = Number(g.target || 0);
+        const current = Number(g.current || 0);
+        const newTarget = Number.parseFloat(document.getElementById('editGoalTargetInput')?.value || '');
+        if (!Number.isFinite(newTarget) || newTarget <= 0) return alert('Suma nouă este invalidă.');
+        if (newTarget <= oldTarget) return alert('Suma nouă trebuie să fie mai mare decât suma actuală a obiectivului.');
+        if (newTarget < current) return alert('Suma nouă nu poate fi mai mică decât banii deja strânși.');
+        const btn = document.getElementById('editGoalBtn');
+        if (btn) { btn.textContent = 'Salvez...'; btn.disabled = true; }
+        g.target = newTarget;
+        this.closeModal();
+        renderApp(true);
+        try {
+          const rpc = await supabase.rpc('update_goal_target_safe', { p_goal_id: id, p_new_target: newTarget });
+          if (rpc.error) {
+            const msg = String(rpc.error.message || rpc.error.details || rpc.error.hint || '').toLowerCase();
+            const missingRpc = rpc.error.code === 'PGRST202' || msg.includes('could not find') || msg.includes('function');
+            if (!missingRpc) throw rpc.error;
+            const upd = await supabase.from('goals').update({ target: newTarget }).eq('id', id).select('target').maybeSingle();
+            if (upd.error) throw upd.error;
+          }
+          scheduleSoftRefresh();
+        } catch (error) {
+          g.target = oldTarget;
+          renderApp(true);
+          alert('Eroare la editare: ' + (error.message || error));
+        }
+      },
       openMoney(id, mode) {
         const g = goals.find(x => x.id === id); if (!g) return;
         if (isGoalDone(g)) return alert('Obiectiv finalizat. Nu mai poți modifica suma.');
         const title = mode === 'remove' ? 'Scoate bani' : mode === 'gift' ? 'Oferă bani' : 'Pune bani';
         const action = mode === 'remove' ? 'Scoate' : mode === 'gift' ? 'Oferă' : 'Pune';
-        modal.innerHTML = `<div class="modal-backdrop"><div class="sheet"><div class="grab"></div><h3 class="text-xl font-medium mb-1">${title}</h3><p class="text-sm muted mb-4">${escapeHTML(String(g.title || '').toUpperCase())}</p><div class="space-y-3"><input id="moneyAmountInput" type="number" class="input" placeholder="RON"><div class="grid grid-cols-2 gap-2 pt-2"><button class="btn btn-soft btn-full" onclick="window.appActions.closeModal()">Anulează</button><button id="moneyBtn" class="btn btn-gold btn-full" onclick="window.appActions.applyMoney('${id}','${mode}')">${action}</button></div></div></div></div>`;
+        const remaining = Math.max(0, Number(g.target || 0) - Number(g.current || 0));
+        const limitText = mode === 'remove' ? `Poți scoate maxim ${money(Number(g.current || 0))} RON.` : `Poți pune maxim ${money(remaining)} RON, cât lipsește până la obiectiv.`;
+        modal.innerHTML = `<div class="modal-backdrop"><div class="sheet"><div class="grab"></div><h3 class="text-xl font-medium mb-1">${title}</h3><p class="text-sm muted mb-1">${escapeHTML(String(g.title || '').toUpperCase())}</p><p class="edit-goal-hint mb-4">${limitText}</p><div class="space-y-3"><input id="moneyAmountInput" type="number" class="input" placeholder="RON" min="1" max="${mode === 'remove' ? Number(g.current || 0) : remaining}"><div class="grid grid-cols-2 gap-2 pt-2"><button class="btn btn-soft btn-full" onclick="window.appActions.closeModal()">Anulează</button><button id="moneyBtn" class="btn btn-gold btn-full" onclick="window.appActions.applyMoney('${id}','${mode}')">${action}</button></div></div></div></div>`;
       },
       async applyMoney(id, mode) {
         const amountRaw = parseFloat(document.getElementById('moneyAmountInput')?.value || '');
@@ -1097,10 +1184,12 @@
 
         const old = Number(g.current || 0);
         const target = Number(g.target || 0);
+        const remaining = Math.max(0, target - old);
+        if (mode !== 'remove' && amountRaw > remaining) return alert('Poți pune maxim ' + money(remaining) + ' RON. Ce este peste obiectiv nu se acceptă.');
         const requestedDelta = mode === 'remove' ? -amountRaw : amountRaw;
-        const optimistic = mode === 'remove' ? Math.max(0, old + requestedDelta) : Math.min(target, old + requestedDelta);
-        const optimisticDelta = optimistic - old;
-        if (optimisticDelta === 0) return alert('Obiectiv finalizat. Nu mai poți adăuga bani aici.');
+        const optimistic = old + requestedDelta;
+        const optimisticDelta = requestedDelta;
+        if (optimisticDelta === 0) return alert('Sumă invalidă.');
 
         const btn = document.getElementById('moneyBtn');
         if (btn) { btn.textContent = 'Se salvează...'; btn.disabled = true; }
@@ -1127,7 +1216,7 @@
             const msg = String(rpc.error.message || rpc.error.details || rpc.error.hint || '');
             const missingRpc = rpc.error.code === 'PGRST202' || msg.toLowerCase().includes('could not find') || msg.toLowerCase().includes('function');
             if (!missingRpc) throw rpc.error;
-            const fallbackAmount = mode === 'remove' ? Math.max(0, old + requestedDelta) : Math.min(target, old + requestedDelta);
+            const fallbackAmount = old + requestedDelta;
             const upd = await supabase.from('goals').update({ current: fallbackAmount }).eq('id', id).select('current').maybeSingle();
             if (upd.error) throw upd.error;
             if (upd.data?.current !== undefined) finalAmount = Number(upd.data.current);
