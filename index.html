@@ -7,12 +7,12 @@
   <meta name="theme-color" content="#f4f7fb" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="Obiectivele Familiei" />
-  <link rel="icon" type="image/webp" href="" />
+  <link rel="icon" type="image/png" href="" />
   <link rel="apple-touch-icon" href="" />
   <link id="dynamicManifest" rel="manifest" href="" />
   <script>
     (() => {
-      const icon = 'https://i.postimg.cc/vTJqVMdD/banc-de-purceli-ilustrarea-unui-desen-animat-unic-al-unei-bnci-cei-cu-monede-dolari-17106942.webp';
+      const icon = 'https://i.postimg.cc/nrW4s1By/dd73a3a7-fa3f-4110-b42f-ed14f5f8efaa.png';
       window.HOME_SCREEN_ICON_URL = icon;
       const manifest = {
         name: 'Obiectivele Familiei Coman',
@@ -21,7 +21,7 @@
         display: 'standalone',
         background_color: 'transparent',
         theme_color: '#f4f7fb',
-        icons: [{ src: icon, sizes: '512x512', type: 'image/webp', purpose: 'any' }]
+        icons: [{ src: icon, sizes: '512x512', type: 'image/png', purpose: 'any' }]
       };
       const blob = new Blob([JSON.stringify(manifest)], { type: 'application/manifest+json' });
       window.addEventListener('DOMContentLoaded', () => {
@@ -1188,7 +1188,7 @@
     const money = (v) => Number(v || 0).toLocaleString('ro-RO', { maximumFractionDigits: 2 });
 
     const appIconUrl = window.HOME_SCREEN_ICON_URL || '';
-    const piggyTopIconUrl = 'https://i.postimg.cc/vTJqVMdD/banc-de-purceli-ilustrarea-unui-desen-animat-unic-al-unei-bnci-cei-cu-monede-dolari-17106942.webp';
+    const piggyTopIconUrl = 'https://i.postimg.cc/nrW4s1By/dd73a3a7-fa3f-4110-b42f-ed14f5f8efaa.png';
     let eurRateCache = { date: '', rate: null };
     const goalCurrency = (goal) => String(goal?.currency || 'RON').toUpperCase() === 'EUR' ? 'EUR' : 'RON';
     const transactionCurrency = (t) => String(t?.currency || 'RON').toUpperCase() === 'EUR' ? 'EUR' : 'RON';
