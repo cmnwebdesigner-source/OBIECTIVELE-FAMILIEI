@@ -171,29 +171,13 @@
 
         const checkAuth = async () => {
             appContainer.innerHTML = `<div class="flex h-screen items-center justify-center"><i class="fas fa-spinner fa-spin text-4xl text-indigo-500"></i></div>`;
-            const { data: { session }, error } = await supabase.auth.getSession();
-            if (error) throw error;
-            if (session) {
-                const keepSignedIn = localStorage.getItem('keepSignedIn') === '1';
-                if (!keepSignedIn) {
-                    await supabase.auth.signOut();
-                    currentUser = null;
-                    renderAuth();
-                    return;
-                }
-                currentUser = session.user;
-                await ensureOwnProfile();
-                await fetchData();
-                setupRealtime();
-            } else {
-                renderAuth();
-            }
 
             supabase.auth.onAuthStateChange(async (_event, session) => {
+                if (authRenderLock) return;
                 if (session) {
                     currentUser = session.user;
-                    await ensureOwnProfile();
-                    await fetchData();
+                    await ensureOwnProfile().catch(console.error);
+                    await fetchData({ soft: true }).catch(console.error);
                     setupRealtime();
                 } else {
                     currentUser = null;
@@ -205,6 +189,25 @@
                     renderAuth();
                 }
             });
+
+            const { data: { session }, error } = await supabase.auth.getSession();
+            if (error) throw error;
+            if (session) {
+                const keepSignedIn = localStorage.getItem('keepSignedIn') !== '0';
+                const sameBrowserSession = sessionStorage.getItem('activeSession') === '1';
+                if (!keepSignedIn && !sameBrowserSession) {
+                    await supabase.auth.signOut();
+                    currentUser = null;
+                    renderAuth();
+                    return;
+                }
+                currentUser = session.user;
+                await ensureOwnProfile().catch(console.error);
+                await fetchData();
+                setupRealtime();
+            } else {
+                renderAuth();
+            }
         };
 
         const renderMainSoft = () => {
@@ -291,7 +294,7 @@
                         </div>
                         <label class="flex items-center justify-between gap-3 p-3 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 cursor-pointer">
                             <span class="text-sm font-semibold text-slate-700 dark:text-slate-200">Ține-mă conectat</span>
-                            <input type="checkbox" id="keepSignedInInput" class="w-5 h-5 accent-indigo-600" ${localStorage.getItem('keepSignedIn') === '1' ? 'checked' : ''}>
+                            <input type="checkbox" id="keepSignedInInput" class="w-5 h-5 accent-indigo-600" ${localStorage.getItem('keepSignedIn') !== '0' ? 'checked' : ''}>
                         </label>
                         <p class="text-xs text-slate-400 dark:text-slate-500 -mt-1"><i class="fas fa-lock mr-1"></i>Salvează parola pentru o conectare mai rapidă.</p>
                         <button id="authBtn" onclick="window.appActions.handleAuth(${isLogin})" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition-all shadow-md mt-4">
@@ -840,30 +843,55 @@
                 const password = document.getElementById('passInput').value;
                 const btn = document.getElementById('authBtn');
                 if (!email || !password) { alert('Completează ambele câmpuri!'); return; }
-                const keepSignedIn = document.getElementById('keepSignedInInput')?.checked === true;
+                const keepSignedIn = document.getElementById('keepSignedInInput')?.checked !== false;
                 localStorage.setItem('keepSignedIn', keepSignedIn ? '1' : '0');
-                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Se procesează...';
+                sessionStorage.setItem('activeSession', '1');
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Se conectează...';
                 btn.disabled = true;
+                authRenderLock = true;
                 try {
-                    let err;
+                    let data;
+                    let error;
                     if (isLogin) {
-                        const { error } = await supabase.auth.signInWithPassword({ email, password });
-                        err = error;
+                        const res = await supabase.auth.signInWithPassword({ email, password });
+                        data = res.data;
+                        error = res.error;
                     } else {
-                        const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { role: window.selectedSignupRole } } });
-                        err = error;
-                        if (!error && data?.user) {
-                            await supabase.from('profiles').upsert({ id: data.user.id, email, role: window.selectedSignupRole }, { onConflict: 'id' });
-                        }
+                        const res = await supabase.auth.signUp({ email, password, options: { data: { role: window.selectedSignupRole } } });
+                        data = res.data;
+                        error = res.error;
                     }
-                    if (err) throw err;
+                    if (error) throw error;
+
+                    const user = data?.user || data?.session?.user;
+                    if (!user) {
+                        alert('Cont creat. Dacă ai confirmarea pe email activă, verifică emailul și apoi conectează-te.');
+                        authRenderLock = false;
+                        btn.innerHTML = isLogin ? 'Conectare' : 'Creează Cont';
+                        btn.disabled = false;
+                        return;
+                    }
+
+                    currentUser = user;
+                    await supabase.from('profiles').upsert({
+                        id: currentUser.id,
+                        email: currentUser.email,
+                        role: currentUser.user_metadata?.role || window.selectedSignupRole || 'sot'
+                    }, { onConflict: 'id' }).catch(console.error);
+
+                    await fetchData({ render: false }).catch(console.error);
+                    currentTab = 'home';
+                    renderMain();
+                    setupRealtime();
                 } catch (error) {
                     alert('Eroare: ' + (error.message || 'Date incorecte.'));
                     btn.innerHTML = isLogin ? 'Conectare' : 'Creează Cont';
                     btn.disabled = false;
+                } finally {
+                    setTimeout(() => { authRenderLock = false; }, 500);
                 }
             },
-            logout: async () => { await supabase.auth.signOut(); },
+            logout: async () => { sessionStorage.removeItem('activeSession'); await supabase.auth.signOut(); },
             openAddGoalModal: () => {
                 document.getElementById('modalContainer').innerHTML = `
                     <div class="fixed inset-0 modal-backdrop flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
