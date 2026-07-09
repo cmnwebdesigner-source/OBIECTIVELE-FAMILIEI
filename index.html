@@ -857,6 +857,34 @@
       color:var(--text);
     }
     body.dark-mode .piggy-progress-line, body.dark-mode .piggy-progress-big { background:rgba(255,255,255,.08); }
+
+    .piggy-flying-coin {
+      position: fixed;
+      z-index: 10000;
+      width: 34px;
+      height: 34px;
+      border-radius: 999px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 800;
+      color: #7c2d12;
+      background: radial-gradient(circle at 32% 28%, #fff7b8 0 12%, #fde047 30%, #f59e0b 70%, #b45309 100%);
+      box-shadow: 0 10px 22px rgba(245,158,11,.35), inset 0 1px 0 rgba(255,255,255,.55);
+      pointer-events: none;
+      transform: translate(-50%, -50%) scale(.9);
+      animation: piggyCoinFly .72s cubic-bezier(.16, .9, .22, 1) forwards;
+      --coin-x: 0px;
+      --coin-y: -120px;
+    }
+    @keyframes piggyCoinFly {
+      0% { opacity: 0; transform: translate(-50%, -50%) scale(.65) rotate(-18deg); }
+      14% { opacity: 1; transform: translate(-50%, -50%) scale(1.05) rotate(8deg); }
+      78% { opacity: 1; transform: translate(calc(-50% + var(--coin-x)), calc(-50% + var(--coin-y))) scale(.72) rotate(340deg); }
+      100% { opacity: 0; transform: translate(calc(-50% + var(--coin-x)), calc(-50% + var(--coin-y))) scale(.28) rotate(430deg); }
+    }
+
     body.dark-mode .piggy-page-card, body.dark-mode .piggy-history-row { background:rgba(15,23,42,.86); border-color:rgba(255,255,255,.10); box-shadow:0 16px 38px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.04); }
     body.dark-mode .piggy-big-icon { background:rgba(255,255,255,.08); border-color:rgba(255,255,255,.10); color:var(--text); }
     body.dark-mode .milestone-chip { background:rgba(255,255,255,.055); border-color:rgba(255,255,255,.07); }
@@ -967,7 +995,7 @@
       const finalTarget = PIGGY_MILESTONES[PIGGY_MILESTONES.length - 1].target;
       const next = PIGGY_MILESTONES.find(m => balance < m.target) || PIGGY_MILESTONES[PIGGY_MILESTONES.length - 1];
       const completed = balance >= finalTarget;
-      const message = completed ? 'Ați ajuns la 100 RON. Puteți sparge pușculița și începe din nou.' : next.message;
+      const message = completed ? 'Ați trecut de targetul de 100 RON. Puteți adăuga în continuare sau sparge pușculița când vreți.' : next.message;
       return { target: finalTarget, nextTarget: next.target, message, completed, percent: Math.min(100, Math.round((balance / Math.max(1, finalTarget)) * 100)) };
     };
     const showCompletedOnHome = (goal) => !isGoalDone(goal) || Number(completedHold[goal.id] || 0) > Date.now();
@@ -1228,7 +1256,7 @@
     function piggyHistoryRow(t) {
       const amount = Number(t.amount || 0);
       const isBreak = amount < 0;
-      const title = isBreak ? 'Pușculiță spartă' : `${ownerLabel(t.from_role)} a pus o monedă`;
+      const title = isBreak ? 'Pușculiță spartă' : 'Monedă adăugată';
       const date = new Date(t.timestamp || t.created_at || Date.now()).toLocaleString('ro-RO', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
       return `<div class="piggy-history-row">
         <div class="min-w-0">
@@ -1247,7 +1275,6 @@
         const cls = balance >= m.target ? 'done' : (m.target === info.nextTarget ? 'next' : '');
         return `<span class="milestone-chip ${cls}">${m.target} lei</span>`;
       }).join('');
-      const coinDisabled = balance >= info.target;
       return `
         ${backButton()}
         <div class="piggy-page-card mb-4">
@@ -1256,16 +1283,16 @@
             <div class="min-w-0">
               <p class="label">Pușculiță comună</p>
               <h2 class="piggy-total-large">${money(balance)} RON</h2>
-              <p class="piggy-target-note">Target final: 100 RON. După ce o spargeți, pornește iar de la 0.</p>
+              <p class="piggy-target-note">Target vizual: 100 RON. Puteți adăuga în continuare, iar când vreți o spargeți și pornește de la 0.</p>
             </div>
           </div>
           <div class="piggy-progress-big"><span style="width:${info.percent}%"></span></div>
           <p class="text-xs muted mb-3">${escapeHTML(info.message)}</p>
           <div class="milestone-row mb-3">${milestones}</div>
           <div class="piggy-coin-grid">
-            <button class="coin-btn" ${coinDisabled ? 'disabled' : ''} onclick="window.appActions.addPiggyCoin(0.01)"><span class="coin-dot"></span>1 ban</button>
-            <button class="coin-btn" ${coinDisabled ? 'disabled' : ''} onclick="window.appActions.addPiggyCoin(0.10)"><span class="coin-dot"></span>10 bani</button>
-            <button class="coin-btn" ${coinDisabled ? 'disabled' : ''} onclick="window.appActions.addPiggyCoin(0.50)"><span class="coin-dot"></span>50 bani</button>
+            <button class="coin-btn" onclick="window.appActions.addPiggyCoin(0.01, event)"><span class="coin-dot"></span>1 ban</button>
+            <button class="coin-btn" onclick="window.appActions.addPiggyCoin(0.10, event)"><span class="coin-dot"></span>10 bani</button>
+            <button class="coin-btn" onclick="window.appActions.addPiggyCoin(0.50, event)"><span class="coin-dot"></span>50 bani</button>
           </div>
           <button class="piggy-break-btn" ${balance <= 0 ? 'disabled' : ''} onclick="window.appActions.breakPiggy()">${svg.pig} Sparge pușculița</button>
         </div>
@@ -1528,7 +1555,7 @@
       const amount = Number(t.amount || 0);
       const color = amount < 0 ? 'var(--danger)' : 'var(--success)';
       const piggy = isPiggyTransaction(t);
-      const text = piggy ? 'Monedă pusă în' : (amount < 0 ? 'S-a scos din' : (t.from_role === t.to_role ? 'S-a pus la' : 'S-a oferit la'));
+      const text = piggy ? 'Monedă adăugată' : (amount < 0 ? 'S-a scos din' : (t.from_role === t.to_role ? 'S-a pus la' : 'S-a oferit la'));
       const title = piggy ? 'PUȘCULIȚĂ' : String(t.goal_title || '').toUpperCase();
       return `<div class="card" style="padding:11px 12px"><div class="flex items-center justify-between gap-3"><p class="text-xs muted">${text} <span style="color:var(--text)">${escapeHTML(title)}</span></p><p class="text-xs" style="color:${color}; white-space:nowrap;">${amount > 0 ? '+' : ''}${money(amount)}</p></div></div>`;
     }
@@ -1603,6 +1630,27 @@
         root.appendChild(p);
         setTimeout(() => p.remove(), 1700);
       }
+    }
+
+    function animatePiggyCoin(event, amount) {
+      try {
+        const startRect = event?.currentTarget?.getBoundingClientRect?.();
+        const target = document.querySelector('.piggy-big-icon') || document.querySelector('.piggy-icon-box') || document.querySelector('.piggy-card');
+        const targetRect = target?.getBoundingClientRect?.();
+        const startX = startRect ? startRect.left + startRect.width / 2 : window.innerWidth / 2;
+        const startY = startRect ? startRect.top + startRect.height / 2 : window.innerHeight / 2;
+        const endX = targetRect ? targetRect.left + targetRect.width / 2 : window.innerWidth / 2;
+        const endY = targetRect ? targetRect.top + targetRect.height / 2 : 120;
+        const coin = document.createElement('div');
+        coin.className = 'piggy-flying-coin';
+        coin.textContent = amount >= 0.5 ? '50' : amount >= 0.1 ? '10' : '1';
+        coin.style.left = startX + 'px';
+        coin.style.top = startY + 'px';
+        coin.style.setProperty('--coin-x', (endX - startX) + 'px');
+        coin.style.setProperty('--coin-y', (endY - startY) + 'px');
+        document.body.appendChild(coin);
+        setTimeout(() => coin.remove(), 850);
+      } catch (_) {}
     }
 
     window.appActions = {
@@ -1837,14 +1885,10 @@
         }
       },
 
-      async addPiggyCoin(amount) {
+      async addPiggyCoin(amount, event) {
         const value = fromCents(toCents(amount));
         if (!currentUser || !Number.isFinite(value) || value <= 0) return;
-        const currentBalance = piggyBalance();
-        const finalTarget = PIGGY_MILESTONES[PIGGY_MILESTONES.length - 1].target;
-        const remaining = fromCents(toCents(finalTarget) - toCents(currentBalance));
-        if (remaining <= 0) return alert('Pușculița a ajuns la 100 RON. Apasă „Sparge pușculița” ca să începeți din nou.');
-        if (toCents(value) > toCents(remaining)) return alert('Mai lipsesc doar ' + money(remaining) + ' RON până la 100 RON. Moneda asta trece peste target.');
+        animatePiggyCoin(event, value);
 
         const localTransaction = {
           id: 'local-piggy-' + Date.now() + '-' + Math.random().toString(16).slice(2),
