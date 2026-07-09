@@ -759,8 +759,8 @@
       overflow:hidden;
     }
     .top-piggy {
-      width:46px;
-      height:46px;
+      width:54px;
+      height:54px;
       display:flex;
       align-items:center;
       justify-content:center;
@@ -812,18 +812,19 @@
       box-shadow:0 16px 30px rgba(15,23,42,.10), inset 0 1px 0 rgba(255,255,255,.9);
     }
     .piggy-icon-box {
-      width:46px;
-      height:46px;
-      border-radius:18px;
+      width:54px;
+      height:54px;
+      border-radius:0;
       display:flex;
       align-items:center;
       justify-content:center;
       color:#0f172a;
-      background:linear-gradient(145deg, rgba(255,255,255,.98), rgba(226,232,240,.92));
-      border:1px solid rgba(15,23,42,.08);
+      background:transparent;
+      border:0;
       box-shadow:none;
       flex-shrink:0;
     }
+    .piggy-icon-box svg { width:50px; height:50px; }
     .piggy-head-label { font-size:11px; color:var(--muted); line-height:1; }
     .piggy-head-value { margin-top:4px; font-size:18px; font-weight:450; letter-spacing:-.035em; color:var(--text); white-space:nowrap; }
     .piggy-card {
@@ -902,18 +903,19 @@
       overflow:hidden;
     }
     .piggy-big-icon {
-      width:62px;
-      height:62px;
-      border-radius:24px;
+      width:78px;
+      height:78px;
+      border-radius:0;
       display:flex;
       align-items:center;
       justify-content:center;
       color:#0f172a;
-      background:linear-gradient(145deg,#ffffff,#e2e8f0);
-      border:1px solid rgba(15,23,42,.08);
-      box-shadow:0 14px 28px rgba(15,23,42,.08), inset 0 1px 0 rgba(255,255,255,.95);
+      background:transparent;
+      border:0;
+      box-shadow:none;
       flex-shrink:0;
     }
+    .piggy-big-icon svg { width:74px; height:74px; }
     .piggy-total-large { font-size:36px; line-height:1; letter-spacing:-.055em; font-weight:460; color:var(--text); }
     .piggy-target-note { font-size:12px; color:var(--muted); margin-top:6px; line-height:1.35; }
     .piggy-progress-big { height:12px; border-radius:999px; background:rgba(15,23,42,.07); overflow:hidden; margin:16px 0 12px; }
@@ -967,7 +969,7 @@
     body.dark-mode .piggy-progress-line, body.dark-mode .piggy-progress-big { background:rgba(255,255,255,.08); }
 
     body.dark-mode .piggy-page-card, body.dark-mode .piggy-history-row { background:rgba(15,23,42,.86); border-color:rgba(255,255,255,.10); box-shadow:0 16px 38px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.04); }
-    body.dark-mode .piggy-big-icon { background:rgba(255,255,255,.08); border-color:rgba(255,255,255,.10); color:var(--text); }
+    body.dark-mode .piggy-big-icon, body.dark-mode .piggy-icon-box { background:transparent; border-color:transparent; box-shadow:none; color:var(--text); }
     body.dark-mode .milestone-chip { background:rgba(255,255,255,.055); border-color:rgba(255,255,255,.07); }
     body.dark-mode .milestone-chip.done { color:#86efac; background:rgba(22,163,74,.15); border-color:rgba(134,239,172,.16); }
     body.dark-mode .milestone-chip.next { color:#93c5fd; background:rgba(37,99,235,.17); border-color:rgba(147,197,253,.16); }
@@ -1164,6 +1166,7 @@
     async function getTodayEurRate() {
       const day = todayISO();
       if (eurRateCache.date === day && Number(eurRateCache.rate) > 0) return Number(eurRateCache.rate);
+
       try {
         const cached = await safeFetch(supabase.from('fx_rates').select('rate').eq('rate_date', day).eq('base_currency', 'EUR').eq('target_currency', 'RON').maybeSingle());
         const saved = Array.isArray(cached) ? cached[0] : cached;
@@ -1173,28 +1176,41 @@
           return Number(saved.rate);
         }
       } catch (_) {}
-      try {
-        const res = await fetch('https://api.frankfurter.app/latest?from=EUR&to=RON', { cache: 'no-store' });
-        const json = await res.json();
-        const rate = Number(json?.rates?.RON);
-        if (!Number.isFinite(rate) || rate <= 0) throw new Error('Curs invalid');
-        eurRateCache = { date: day, rate };
-        localStorage.setItem('eur_rate_last', JSON.stringify(eurRateCache));
-        try { await supabase.from('fx_rates').upsert({ rate_date: day, base_currency: 'EUR', target_currency: 'RON', rate, source: 'frankfurter' }); } catch (_) {}
-        return rate;
-      } catch (_) {
+
+      const sources = [
+        async () => {
+          const res = await fetch('https://api.frankfurter.dev/v2/rate/EUR/RON', { cache: 'no-store' });
+          if (!res.ok) throw new Error('Frankfurter v2 nu răspunde');
+          const json = await res.json();
+          return Number(json?.rate);
+        },
+        async () => {
+          const res = await fetch('https://api.frankfurter.app/latest?from=EUR&to=RON', { cache: 'no-store' });
+          if (!res.ok) throw new Error('Frankfurter vechi nu răspunde');
+          const json = await res.json();
+          return Number(json?.rates?.RON);
+        }
+      ];
+
+      for (const loadRate of sources) {
         try {
-          const last = JSON.parse(localStorage.getItem('eur_rate_last') || '{}');
-          if (Number(last.rate) > 0) return Number(last.rate);
-        } catch (_) {}
-        const manual = prompt('Nu pot lua automat cursul EUR/RON azi. Scrie cursul manual, ex: 4.97');
-        const rate = Number(String(manual || '').trim().replace(',', '.'));
-        if (!Number.isFinite(rate) || rate <= 0) throw new Error('Curs EUR invalid. Încearcă iar.');
-        eurRateCache = { date: day, rate };
-        localStorage.setItem('eur_rate_last', JSON.stringify(eurRateCache));
-        try { await supabase.from('fx_rates').upsert({ rate_date: day, base_currency: 'EUR', target_currency: 'RON', rate, source: 'manual' }); } catch (_) {}
-        return rate;
+          const rate = await loadRate();
+          if (!Number.isFinite(rate) || rate <= 0) throw new Error('Curs invalid');
+          eurRateCache = { date: day, rate };
+          localStorage.setItem('eur_rate_last', JSON.stringify(eurRateCache));
+          try { await supabase.from('fx_rates').upsert({ rate_date: day, base_currency: 'EUR', target_currency: 'RON', rate, source: 'automatic' }); } catch (_) {}
+          return rate;
+        } catch (error) {
+          console.warn('Nu am putut lua cursul din sursa automată:', error);
+        }
       }
+
+      try {
+        const last = JSON.parse(localStorage.getItem('eur_rate_last') || '{}');
+        if (Number(last.rate) > 0) return Number(last.rate);
+      } catch (_) {}
+
+      throw new Error('Nu pot lua automat cursul EUR/RON acum. Verifică internetul și încearcă iar.');
     }
 
     const normalizeFamilyCode = (v) => String(v || '')
@@ -1429,15 +1445,15 @@
         .subscribe();
     }
 
-    function scheduleSoftRefresh(delay = 450) {
+    function scheduleSoftRefresh(delay = 80) {
       clearTimeout(refreshTimer);
       if (Date.now() < suppressSoftUntil) {
-        refreshTimer = setTimeout(() => fetchData({ render: false }), Math.max(500, suppressSoftUntil - Date.now()));
+        refreshTimer = setTimeout(() => fetchData({ render: false }), Math.max(180, suppressSoftUntil - Date.now()));
         return;
       }
       refreshTimer = setTimeout(() => {
-        // Nu redesenăm paginile sensibile, ca să nu se vadă saltul la refresh.
-        const quietPages = ['home', 'moneyHistory', 'calendar', 'calculator'].includes(currentPage);
+        // Calculatorul rămâne fără redesenare ca să nu piardă ce tastezi.
+        const quietPages = ['calculator'].includes(currentPage);
         if (quietPages) {
           fetchData({ render: false });
         } else {
@@ -2031,12 +2047,18 @@ function piggyPageHTML() {
         </div>`;
     }
 
+    function transactionActorLabel(email) {
+      const role = getRole(email);
+      return role === 'sotie' ? 'Soția' : 'Soțul';
+    }
+
     function transactionRow(t) {
       const amount = Number(t.amount || 0);
       const color = amount < 0 ? 'var(--danger)' : 'var(--success)';
       const currency = transactionCurrency(t);
       const fromGame = String(t.source || '').toLowerCase() === 'game_withdrawal' || String(t.from_role || '').toUpperCase() === 'SOLD_JOCURI';
-      const text = fromGame ? 'Adăugat din joc' : (amount < 0 ? 'S-a scos din' : (t.from_role === t.to_role ? 'S-a pus la' : 'S-a oferit la'));
+      const actor = transactionActorLabel(t.from_role);
+      const text = fromGame ? 'Adăugat din joc' : (amount < 0 ? `${actor} a scos din` : (t.from_role === t.to_role ? `${actor} a pus la` : `${actor} a oferit la`));
       const title = String(t.goal_title || '').toUpperCase();
       const ron = transactionRonAmount(t);
       const extra = currency === 'EUR' ? `<span class="muted"> · ${money(Math.abs(ron))} RON</span>` : '';
@@ -2456,12 +2478,23 @@ function piggyPageHTML() {
     }
 
     function animatePiggyCoin(event, cents) {
-      // Doar efect de apăsare pe buton. Animația cu bănuțul zburător a fost scoasă.
       try {
         const btn = event?.currentTarget || event?.target?.closest?.('.coin-btn');
         if (!btn) return;
         btn.classList.add('pressed');
         setTimeout(() => btn.classList.remove('pressed'), 190);
+
+        const pigTarget = document.querySelector('.piggy-big-icon') || document.querySelector('.piggy-icon-box');
+        const start = btn.getBoundingClientRect();
+        const end = pigTarget ? pigTarget.getBoundingClientRect() : { left: window.innerWidth / 2, top: 120, width: 1, height: 1 };
+        const coin = document.createElement('span');
+        coin.className = 'piggy-flying-coin';
+        coin.style.left = (start.left + start.width / 2) + 'px';
+        coin.style.top = (start.top + start.height / 2) + 'px';
+        coin.style.setProperty('--coin-x', (end.left + end.width / 2 - (start.left + start.width / 2)) + 'px');
+        coin.style.setProperty('--coin-y', (end.top + end.height / 2 - (start.top + start.height / 2)) + 'px');
+        document.body.appendChild(coin);
+        setTimeout(() => coin.remove(), 820);
       } catch (_) {}
     }
 
@@ -2495,7 +2528,7 @@ function piggyPageHTML() {
         completedNotified = new Set();
         ensureOwnProfile()
           .then(() => fetchData())
-          .then(() => setupRealtime())
+          .then(() => { setupRealtime(); getTodayEurRate().catch(() => {}); })
           .catch((error) => {
             console.error(error);
             alert('Eroare la autentificare: ' + (error.message || error));
@@ -3204,7 +3237,7 @@ function piggyPageHTML() {
       async clearDayHistory(event) {
         if (event) event.stopPropagation();
         const ids = visibleTransactions()
-          .filter(t => transactionBelongsToFamily(t) && !isPiggyTransaction(t) && String(t.date).slice(0,10) === selectedDate)
+          .filter(t => transactionBelongsToFamily(t) && !isPiggyTransaction(t) && t.goal_id && String(t.date).slice(0,10) === selectedDate)
           .map(t => t.id);
         await window.appActions.deleteTransactionsByIds(ids, 'istoric zi');
       },
@@ -3326,6 +3359,7 @@ function piggyPageHTML() {
           completedNotified = new Set();
           await fetchData();
           setupRealtime();
+          getTodayEurRate().catch(() => {});
         } else {
           authHTML(true);
         }
