@@ -967,7 +967,7 @@
 
   
 
-    /* Jocuri / Prinde banii */
+    /* Jocuri / BINGO */
     .game-wallet-card {
       border-radius:26px;
       padding:16px;
@@ -1061,12 +1061,13 @@
     let gameTransactions = [];
     let selectedGameRoomId = '';
     let selectedBetAmount = 5;
+    let selectedBingoSize = 5;
     let inviteModalRoomId = '';
     let flappyState = null;
     let flappyLoop = null;
     let flappyCountdownTimer = null;
     let lastAutoGameRoomId = '';
-    const GAME_TYPE_FLAPPY = 'catch_money';
+    const GAME_TYPE_FLAPPY = 'bingo';
     const DEFAULT_FAMILY_CODE = '280706';
     const PIN_USERS = {
       '2807': { id: '11111111-1111-4111-8111-111111111111', email: 'ionut7628c@gmail.com', role: 'sot', label: 'Soț' },
@@ -1142,6 +1143,67 @@
     const gameScoreFor = (room, email) => Number((room?.scores || {})[email] || 0);
     const gameDoneFor = (room, email) => !!((room?.finished_players || {})[email]);
     const gamePersonLabel = (email) => email === currentUser?.email ? 'Tu' : roleLabel(getRole(email));
+    const bingoLetters = ['B','I','N','G','O'];
+    function bingoState(room) {
+      const st = room?.game_state && typeof room.game_state === 'object' ? room.game_state : {};
+      return {
+        size: Number(room?.board_size || st.size || selectedBingoSize || 5),
+        boards: st.boards || {},
+        marks: st.marks || {},
+        lines: st.lines || {},
+        letters: st.letters || {}
+      };
+    }
+    function createBingoBoard(size) {
+      const total = Number(size || 5) * Number(size || 5);
+      const nums = Array.from({ length: 100 }, (_, i) => i + 1);
+      for (let i = nums.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [nums[i], nums[j]] = [nums[j], nums[i]];
+      }
+      return nums.slice(0, total);
+    }
+    function bingoMarksArray(marks) {
+      if (Array.isArray(marks)) return marks.map(Number).filter(n => Number.isInteger(n));
+      if (marks && typeof marks === 'object') return Object.keys(marks).filter(k => marks[k]).map(Number);
+      return [];
+    }
+    function bingoCompletedLines(size, markedIndexes) {
+      const marked = new Set(bingoMarksArray(markedIndexes));
+      const lines = [];
+      for (let r = 0; r < size; r++) {
+        let ok = true;
+        for (let c = 0; c < size; c++) if (!marked.has(r * size + c)) ok = false;
+        if (ok) lines.push('R' + r);
+      }
+      for (let c = 0; c < size; c++) {
+        let ok = true;
+        for (let r = 0; r < size; r++) if (!marked.has(r * size + c)) ok = false;
+        if (ok) lines.push('C' + c);
+      }
+      let d1 = true, d2 = true;
+      for (let i = 0; i < size; i++) {
+        if (!marked.has(i * size + i)) d1 = false;
+        if (!marked.has(i * size + (size - 1 - i))) d2 = false;
+      }
+      if (d1) lines.push('D1');
+      if (d2) lines.push('D2');
+      return lines;
+    }
+    function bingoLetterHTML(count) {
+      const n = Math.min(5, Number(count || 0));
+      return `<div class="bingo-letters">${bingoLetters.map((l, i) => `<span class="bingo-letter ${i < n ? 'hit' : ''}">${l}</span>`).join('')}</div>`;
+    }
+    function bingoStatusText(room) {
+      if (!room) return '';
+      if (room.status === 'invite') return room.creator_email === currentUser?.email ? 'Invitația a fost trimisă. Așteptăm răspunsul.' : 'Ai primit invitație.';
+      if (room.status === 'accepted') return room.creator_email === currentUser?.email ? `${gamePersonLabel(room.opponent_email)} ți-a acceptat invitația. Poți porni jocul.` : `Ai acceptat invitația. Așteptăm startul.`;
+      if (room.status === 'refused') return `${gamePersonLabel(room.opponent_email)} a refuzat invitația.`;
+      if (room.status === 'countdown') return 'Jocul începe imediat.';
+      if (room.status === 'playing') return 'Jocul este pornit.';
+      if (room.status === 'finished') return room.winner_email ? `${gamePersonLabel(room.winner_email)} a câștigat.` : 'Runda s-a încheiat.';
+      return String(room.status || '');
+    }
     const isHiddenInHistory = (t) => t?.hidden_in_history === true || String(t?.hidden_in_history || '').toLowerCase() === 'true';
     const visibleTransactions = () => transactions.filter(t => !isHiddenInHistory(t));
     const piggyTransactions = () => transactions.filter(isPiggyTransaction);
@@ -1775,8 +1837,9 @@
       const dt = t.timestamp ? new Date(t.timestamp) : new Date(String(t.date || todayISO()) + 'T12:00:00');
       const dateText = dt.toLocaleDateString('ro-RO', { day:'2-digit', month:'short', year:'numeric' });
       const timeText = dt.toLocaleTimeString('ro-RO', { hour:'2-digit', minute:'2-digit' });
+      const fromGame = String(t.source || '').toLowerCase() === 'game_withdrawal' || String(t.note || '').toLowerCase().includes('joc');
       const person = type === 'offered' ? ownerLabel(t.to_role) : ownerLabel(t.from_role);
-      const label = type === 'offered' ? 'Către' : 'De la';
+      const label = fromGame ? (type === 'offered' ? 'Adăugat din joc către' : 'Adăugat din joc de la') : (type === 'offered' ? 'Către' : 'De la');
       return `<div class="card" style="padding:12px 13px">
         <div class="flex items-start justify-between gap-3">
           <div class="min-w-0">
@@ -1792,62 +1855,52 @@
     function gameWalletHTML() {
       const balance = gameWalletBalance();
       return `<div class="game-wallet-card mb-4">
-        <div class="min-w-0">
+        <div>
           <span>Sold Jocuri</span>
           <b>${money(balance)} RON</b>
         </div>
-        <div class="flex items-center gap-2 shrink-0">
-          ${balance > 0 ? `<button class="btn btn-soft" style="padding:10px 12px;border-radius:14px;min-height:40px;" onclick="event.stopPropagation(); window.appActions.openGameWithdrawModal()">Retrage</button>` : ''}
-          <div class="icon-btn" style="width:48px;height:48px;border-radius:18px;color:#2563eb">${svg.gamepad}</div>
-        </div>
+        <button class="btn btn-soft" onclick="window.appActions.openWithdrawGame()">Retrage</button>
       </div>`;
     }
 
     function latestRoomHTML() {
       const room = gameRoomsForMe()[0];
       if (!room) return '';
-      const statusLabel = room.status === 'invite' ? 'Invitație în așteptare' : room.status === 'accepted' ? 'Acceptat' : room.status === 'countdown' ? 'Pregătire joc' : room.status === 'playing' ? 'În joc' : room.status === 'finished' ? 'Finalizat' : 'Refuzat';
+      const statusLabel = room.status === 'invite' ? 'Invitație' : room.status === 'accepted' ? 'Acceptat' : room.status === 'countdown' ? 'Pregătire' : room.status === 'playing' ? 'În joc' : room.status === 'finished' ? 'Finalizat' : 'Refuzat';
       const pillClass = ['countdown','playing'].includes(room.status) ? 'live' : ['invite','accepted'].includes(room.status) ? 'wait' : '';
       const winner = room.winner_email ? `${gamePersonLabel(room.winner_email)} a câștigat` : 'Fără câștigător';
-      return `<div class="game-room-card mb-4" onclick="window.appActions.openFlappyRoom('${room.id}')">
+      return `<div class="game-room-card mb-4" onclick="window.appActions.openFlappyLobby()">
         <div class="flex items-center justify-between gap-3">
-          <div>
-            <p class="text-sm" style="color:var(--text)">Ultima rundă Prinde banii</p>
-            <p class="text-xs muted mt-1">Pariu ${money(room.bet_amount)} RON · ${room.status === 'finished' ? winner : 'apasă pentru detalii'}</p>
-          </div>
+          <div><p class="muted text-xs">Ultima rundă</p><p class="text-sm" style="color:var(--text)">BINGO · ${winner}</p></div>
           <span class="game-pill ${pillClass}">${statusLabel}</span>
         </div>
       </div>`;
     }
 
     function gamesPageHTML() {
+      const withdrawals = gameTransactions.filter(t => String(t.type || '').toLowerCase() === 'withdraw' || Number(t.amount || 0) < 0).slice(0, 8);
       return `${backButton()}
         ${gameWalletHTML()}
         <button class="game-option-card mb-4" onclick="window.appActions.openFlappyLobby()">
           <div class="flex items-center gap-3 min-w-0">
             <div class="game-cover">${svg.gamepad}</div>
-            <div class="min-w-0">
-              <p class="muted text-xs">Joc 1v1 realtime</p>
-              <h2 class="text-xl font-medium tracking-[-.03em]">Prinde banii</h2>
-              <p class="text-xs muted mt-1">Invită, puneți pariu și prindeți banii în același timp.</p>
+            <div class="min-w-0 text-left">
+              <p class="muted text-xs">Joc realtime</p>
+              <h2 class="text-xl font-medium tracking-[-.03em]">BINGO</h2>
+              <p class="text-xs muted mt-1">Alege 5×5, 7×7 sau 10×10, puneți pariu și jucați pe telefoanele voastre.</p>
             </div>
           </div>
-          <span class="game-pill live">Deschide</span>
+          <span class="game-pill live">Start</span>
         </button>
         ${latestRoomHTML()}
-        ${gameRoundsHistoryHTML()}
         <div class="section">
-          <div class="section-head"><span>Istoric Sold Jocuri</span><small>${gameTransactions.length}</small></div>
-          <div class="space-y-2">${gameTransactions.length ? gameTransactions.slice(0,8).map(gameTransactionRow).join('') : emptyHTML('Nu există încă mișcări în soldul jocurilor.')}</div>
+          <div class="section-head"><span>Istoric runde</span><small>${gameRoomsForMe().filter(r => r.status === 'finished').length}</small></div>
+          <div class="space-y-2">${gameRoomsForMe().filter(r => r.status === 'finished').slice(0,8).map(gameRoundRow).join('') || emptyHTML('Nu există runde finalizate încă.')}</div>
+        </div>
+        <div class="section">
+          <div class="section-head"><span>Retrageri</span><small>${withdrawals.length}</small></div>
+          <div class="space-y-2">${withdrawals.length ? withdrawals.map(gameTransactionRow).join('') : emptyHTML('Nu există retrageri din Sold Jocuri.')}</div>
         </div>`;
-    }
-
-    function gameRoundsHistoryHTML() {
-      const rounds = gameRoomsForMe().filter(r => r.status === 'finished').slice(0, 8);
-      return `<div class="section">
-        <div class="section-head"><span>Istoric runde</span><small>${rounds.length}</small></div>
-        <div class="space-y-2">${rounds.length ? rounds.map(gameRoundRow).join('') : emptyHTML('Nu există runde finalizate încă.')}</div>
-      </div>`;
     }
 
     function gameRoundRow(room) {
@@ -1861,7 +1914,7 @@
       const color = room.winner_email === currentUser?.email ? 'var(--success)' : room.winner_email ? 'var(--danger)' : 'var(--muted)';
       return `<div class="card" style="padding:12px 13px">
         <div class="flex items-center justify-between gap-3">
-          <div class="min-w-0"><p class="text-sm" style="color:var(--text)">${escapeHTML(winner)}</p><p class="text-[11px] muted mt-1">${dateText} · ${timeText} · ${myScore} - ${otherScore}</p></div>
+          <div class="min-w-0"><p class="text-sm" style="color:var(--text)">BINGO · ${escapeHTML(winner)}</p><p class="text-[11px] muted mt-1">${dateText} · ${timeText} · ${myScore} - ${otherScore} litere</p></div>
           <p class="text-sm" style="color:${color}; white-space:nowrap;">${money(room.bet_amount)} RON</p>
         </div>
       </div>`;
@@ -1886,43 +1939,50 @@
       const isCreator = room?.creator_email === currentUser?.email;
       const status = room?.status || '';
       const waiting = room && ['invite','accepted','countdown','playing'].includes(status);
-      const bet = Number(room?.bet_amount || selectedBetAmount || 5);
       return `${backButton()}
         ${gameWalletHTML()}
         <div class="top-card mb-4">
-          <div class="flex items-center gap-3"><span class="icon-btn">${svg.gamepad}</span><div><p class="muted text-xs">Prinde banii</p><h2 class="text-2xl font-medium tracking-[-.03em]">Pariu și invitație</h2></div></div>
-          <p class="text-sm muted mt-3">Alege pariul, trimite invitația, apoi prindeți banii în același timp pe ambele telefoane. Bombă = -10, X2 și fulger țin 5 secunde.</p>
+          <div class="flex items-center gap-3"><span class="icon-btn">${svg.gamepad}</span><div><p class="muted text-xs">BINGO</p><h2 class="text-2xl font-medium tracking-[-.03em]">Setări joc</h2></div></div>
+          <p class="text-sm muted mt-3">Alege modul și pariul. După invitație, partenerul primește Acceptă / Refuză, iar jocul începe după start.</p>
         </div>
         <div class="card mb-4">
+          <p class="label">Mod joc</p>
+          <div class="bingo-mode-grid mb-4">
+            ${[5,7,10].map(v => `<button class="bingo-mode-btn ${Number(selectedBingoSize)===v?'active':''}" onclick="window.appActions.setBingoSize(${v})">${v}×${v}</button>`).join('')}
+          </div>
           <p class="label">Pariu</p>
           <div class="bet-grid mb-3">
             ${[5,10,20].map(v => `<button class="bet-btn ${Number(selectedBetAmount)===v?'active':''}" onclick="window.appActions.setGameBet(${v})">${v} RON</button>`).join('')}
           </div>
           <input id="customBetInput" class="input" inputmode="decimal" placeholder="Altă sumă" value="${[5,10,20].includes(Number(selectedBetAmount)) ? '' : money(selectedBetAmount)}">
         </div>
-        ${waiting ? flappyRoomStatusHTML(room) : `<button class="btn btn-gold btn-full" onclick="window.appActions.sendFlappyInvite('${opponent}')">Trimite invitație</button>`}
+        ${waiting ? flappyRoomStatusHTML(room) : `<button class="btn btn-gold btn-full" onclick="window.appActions.sendFlappyInvite('${opponent}')">Trimite invitația</button>`}
         ${room && status === 'accepted' && isCreator ? `<button class="btn btn-gold btn-full mt-3" onclick="window.appActions.startFlappyRoom('${room.id}')">START JOC</button>` : ''}
         ${room && ['countdown','playing'].includes(status) ? `<button class="btn btn-soft btn-full mt-3" onclick="window.appActions.openFlappyRoom('${room.id}')">Intră în joc</button>` : ''}
         ${room && status === 'finished' && isCreator ? `<button class="btn btn-gold btn-full mt-3" onclick="window.appActions.replayFlappyRoom('${room.id}')">Joacă din nou</button>` : ''}`;
     }
 
     function flappyRoomStatusHTML(room) {
-      const isCreator = room.creator_email === currentUser?.email;
       const other = opponentOfRoom(room);
-      const winner = room.winner_email ? gamePersonLabel(room.winner_email) : '';
-      const scores = room.scores || {};
-      const leftScore = Number(scores[currentUser?.email] || 0);
-      const rightScore = Number(scores[other] || 0);
-      const statusText = room.status === 'invite' ? (isCreator ? 'Așteptăm acceptul partenerului.' : 'Ai primit invitație.')
-        : room.status === 'accepted' ? (isCreator ? 'Invitația a fost acceptată. Poți porni jocul.' : 'Așteaptă să pornească jocul.')
-        : room.status === 'countdown' ? 'Jocul pornește imediat.'
-        : room.status === 'playing' ? 'Jocul este în desfășurare.'
-        : room.status === 'finished' ? (winner ? `${winner} a câștigat runda.` : 'Runda s-a terminat la egalitate.')
-        : 'Invitația a fost refuzată.';
+      const leftScore = gameScoreFor(room, currentUser?.email);
+      const rightScore = gameScoreFor(room, other);
       return `<div class="game-room-card">
-        <div class="flex items-center justify-between gap-3 mb-2"><span class="game-pill ${['countdown','playing'].includes(room.status)?'live':'wait'}">${escapeHTML(room.status)}</span><span class="text-xs muted">Pariu ${money(room.bet_amount)} RON</span></div>
-        <p class="text-sm" style="color:var(--text)">${statusText}</p>
-        <div class="flappy-scorebar"><div class="flappy-score"><span>Tu</span><b>${leftScore}</b></div><div class="flappy-score"><span>${escapeHTML(gamePersonLabel(other))}</span><b>${rightScore}</b></div></div>
+        <div class="flex items-center justify-between gap-3 mb-2"><span class="game-pill ${['countdown','playing'].includes(room.status)?'live':'wait'}">${escapeHTML(room.status)}</span><span class="text-xs muted">${Number(room.board_size || selectedBingoSize || 5)}×${Number(room.board_size || selectedBingoSize || 5)} · Pariu ${money(room.bet_amount)} RON</span></div>
+        <p class="text-sm" style="color:var(--text)">${bingoStatusText(room)}</p>
+        <div class="flappy-scorebar"><div class="flappy-score"><span>Tu</span><b>${leftScore}/5</b></div><div class="flappy-score"><span>${escapeHTML(gamePersonLabel(other))}</span><b>${rightScore}/5</b></div></div>
+      </div>`;
+    }
+
+    function bingoBoardHTML(room) {
+      const st = bingoState(room);
+      const email = currentUser.email;
+      const board = st.boards[email] || [];
+      const marks = new Set(bingoMarksArray(st.marks[email]));
+      if (!board.length) return emptyHTML('Tabla se pregătește...');
+      return `<div class="bingo-board-wrap">
+        <div class="bingo-board" style="grid-template-columns:repeat(${st.size}, minmax(0, 1fr));">
+          ${board.map((num, idx) => `<button class="bingo-cell ${marks.has(idx) ? 'marked' : ''}" onclick="window.appActions.markBingoCell('${room.id}', ${idx})"><span>${num}</span></button>`).join('')}
+        </div>
       </div>`;
     }
 
@@ -1930,26 +1990,27 @@
       const room = activeFlappyRoom();
       if (!room) return `${backButton()}${emptyHTML('Nu există joc activ.')}`;
       const other = opponentOfRoom(room);
-      const scores = room.scores || {};
-      const myScore = Number(scores[currentUser.email] || 0);
-      const otherScore = Number(scores[other] || 0);
+      const myScore = gameScoreFor(room, currentUser.email);
+      const otherScore = gameScoreFor(room, other);
       const finished = room.status === 'finished';
       const winnerText = finished ? (room.winner_email ? `${gamePersonLabel(room.winner_email)} a câștigat ${money(room.bet_amount)} RON` : 'Egalitate') : '';
       return `${backButton()}
-        <div class="top-card mb-3"><p class="muted text-xs">Prinde banii</p><h2 class="text-2xl font-medium tracking-[-.03em]">${finished ? 'Rundă finalizată' : 'Prinde banii'}</h2><p class="text-sm muted mt-1">Pariu ${money(room.bet_amount)} RON ${winnerText ? '· ' + winnerText : ''}</p></div>
+        <div class="top-card mb-3"><p class="muted text-xs">BINGO</p><h2 class="text-2xl font-medium tracking-[-.03em]">${finished ? 'Rundă finalizată' : 'Tabla ta'}</h2><p class="text-sm muted mt-1">${Number(room.board_size || selectedBingoSize || 5)}×${Number(room.board_size || selectedBingoSize || 5)} · Pariu ${money(room.bet_amount)} RON ${winnerText ? '· ' + winnerText : ''}</p></div>
         <div class="flappy-scorebar">
-          <div class="flappy-score"><span>Tu</span><b id="myFlappyScore">${myScore}</b></div>
-          <div class="flappy-score"><span>${escapeHTML(gamePersonLabel(other))}</span><b id="otherFlappyScore">${otherScore}</b></div>
+          <div class="flappy-score"><span>Tu</span><b id="myFlappyScore">${myScore}/5</b></div>
+          <div class="flappy-score"><span>${escapeHTML(gamePersonLabel(other))}</span><b id="otherFlappyScore">${otherScore}/5</b></div>
         </div>
-        <div class="flappy-shell">
-          <canvas id="flappyCanvas" class="flappy-canvas" width="360" height="520"></canvas>
-          <div id="flappyOverlay" class="flappy-overlay" style="${room.status === 'playing' ? 'display:none' : ''}">
-            <div class="flappy-count" id="flappyCount">${finished ? (room.winner_email === currentUser.email ? 'Ai câștigat' : room.winner_email ? 'Ai pierdut' : 'Egal') : '3'}</div>
-            <p class="text-sm mt-2" style="color:#0f172a" id="flappyMessage">${finished ? winnerText : 'Pregătește-te'}</p>
-            ${finished && room.creator_email === currentUser.email ? `<button class="btn btn-gold mt-4" onclick="window.appActions.replayFlappyRoom('${room.id}')">Joacă din nou</button>` : ''}
+        ${bingoLetterHTML(myScore)}
+        <div class="bingo-mini-info"><div><small>Mod</small><b>${Number(room.board_size || selectedBingoSize || 5)}×${Number(room.board_size || selectedBingoSize || 5)}</b></div><div><small>Linii</small><b>${myScore}/5</b></div><div><small>Status</small><b>${finished ? 'Final' : room.status === 'playing' ? 'Live' : 'Start'}</b></div></div>
+        <div class="flappy-shell" style="background:transparent;border:0;box-shadow:none;">
+          ${bingoBoardHTML(room)}
+          <div id="flappyOverlay" class="flappy-overlay" style="${room.status === 'playing' || finished ? 'display:none' : ''}; border-radius:28px;">
+            <div class="flappy-count" id="flappyCount">3</div>
+            <p class="text-sm mt-2" style="color:#0f172a" id="flappyMessage">Pregătește-te</p>
           </div>
-          ${!finished ? `<div class="catch-hint">Atinge monedele. Bomba scade 10 puncte. X2 și fulger țin 5 secunde.</div>` : ''}
-        </div>`;
+          ${!finished ? `<div class="catch-hint">Când auzi un număr, apasă căsuța. O linie completă taie o literă din BINGO.</div>` : ''}
+        </div>
+        ${finished && room.creator_email === currentUser.email ? `<button class="btn btn-gold btn-full mt-4" onclick="window.appActions.replayFlappyRoom('${room.id}')">Joacă din nou</button>` : ''}`;
     }
 
     function moneyHistoryPageHTML() {
@@ -1986,7 +2047,7 @@
       const amount = Number(t.amount || 0);
       const color = amount < 0 ? 'var(--danger)' : 'var(--success)';
       const piggy = isPiggyTransaction(t);
-      const fromGame = String(t.from_role || '').toUpperCase() === 'SOLD_JOCURI';
+      const fromGame = String(t.source || '').toLowerCase() === 'game_withdrawal' || String(t.from_role || '').toUpperCase() === 'SOLD_JOCURI';
       const text = piggy ? 'Monedă adăugată' : (fromGame ? 'Adăugat din joc' : (amount < 0 ? 'S-a scos din' : (t.from_role === t.to_role ? 'S-a pus la' : 'S-a oferit la')));
       const title = piggy ? 'PUȘCULIȚĂ' : String(t.goal_title || '').toUpperCase();
       return `<div class="card" style="padding:11px 12px"><div class="flex items-center justify-between gap-3"><p class="text-xs muted">${text} <span style="color:var(--text)">${escapeHTML(title)}</span></p><p class="text-xs" style="color:${color}; white-space:nowrap;">${amount > 0 ? '+' : ''}${money(amount)}</p></div></div>`;
@@ -2065,7 +2126,7 @@
         o1.type = 'sine'; o2.type = 'triangle';
         o1.frequency.value = 740; o2.frequency.value = 1180;
         gain.gain.setValueAtTime(0.0001, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.11, ctx.currentTime + 0.025);
+        gain.gain.exponentialRampToValueAtTime(0.12, ctx.currentTime + 0.025);
         gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.34);
         o1.connect(gain); o2.connect(gain); gain.connect(ctx.destination);
         o1.start(ctx.currentTime); o2.start(ctx.currentTime + 0.045);
@@ -2086,10 +2147,10 @@
             <span class="icon-btn">${svg.gamepad}</span>
             <div class="min-w-0">
               <p class="muted text-xs">Invitație joc</p>
-              <h3 class="text-xl font-medium tracking-[-.03em]">Prinde banii</h3>
+              <h3 class="text-xl font-medium tracking-[-.03em]">BINGO</h3>
             </div>
           </div>
-          <p class="text-sm muted mb-4">${escapeHTML(gamePersonLabel(room.creator_email))} te invită la Prinde banii, pariu <span style="color:var(--text)">${money(room.bet_amount)} RON</span>.</p>
+          <p class="text-sm muted mb-4">${escapeHTML(gamePersonLabel(room.creator_email))} te invită la BINGO ${Number(room.board_size || selectedBingoSize || 5)}×${Number(room.board_size || selectedBingoSize || 5)}, pariu <span style="color:var(--text)">${money(room.bet_amount)} RON</span>.</p>
           <div class="grid grid-cols-2 gap-2">
             <button class="btn btn-soft btn-full" onclick="window.appActions.respondFlappyInvite('${room.id}', false)">Refuză</button>
             <button class="btn btn-gold btn-full" onclick="window.appActions.respondFlappyInvite('${room.id}', true)">Acceptă</button>
@@ -2123,7 +2184,6 @@
 
       const selected = selectedGameRoomId ? gameRooms.find(r => r.id === selectedGameRoomId) : null;
       if (currentPage === 'flappyGame' && selected?.status === 'finished') {
-        stopFlappyLoop();
         renderApp(true);
         return;
       }
@@ -2137,11 +2197,8 @@
       const other = opponentOfRoom(room);
       const my = document.getElementById('myFlappyScore');
       const op = document.getElementById('otherFlappyScore');
-      if (my) my.textContent = gameScoreFor(room, currentUser.email);
-      if (op) op.textContent = gameScoreFor(room, other);
-      if (currentPage === 'flappyGame' && room.status === 'finished' && flappyState?.running) {
-        stopFlappyLoop();
-      }
+      if (my) my.textContent = gameScoreFor(room, currentUser.email) + '/5';
+      if (op) op.textContent = gameScoreFor(room, other) + '/5';
     }
 
     function setupFlappyGameView() {
@@ -2161,16 +2218,11 @@
             await supabase.from('game_rooms').update({ status:'playing' }).eq('id', room.id).neq('status','finished');
             const local = gameRooms.find(r => r.id === room.id);
             if (local) local.status = 'playing';
-            startFlappyLocal(room.id);
+            renderApp(true);
           }
         };
         tick();
-        flappyCountdownTimer = setInterval(tick, 350);
-      } else if (room.status === 'playing') {
-        startFlappyLocal(room.id);
-      } else {
-        stopFlappyLoop();
-        drawFlappyStill();
+        flappyCountdownTimer = setInterval(tick, 300);
       }
     }
 
@@ -2193,7 +2245,7 @@
       ctx.fillStyle = '#0f172a';
       ctx.font = '500 18px Inter, sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('Prinde banii', W / 2, H / 2 + 86);
+      ctx.fillText('BINGO', W / 2, H / 2 + 86);
     }
 
     function stopFlappyLoop() {
@@ -2469,27 +2521,17 @@
       openFlappyLobby() { previousPage = currentPage; currentPage = 'flappyLobby'; renderApp(); },
       openFlappyRoom(id) { selectedGameRoomId = id; previousPage = currentPage; currentPage = 'flappyGame'; renderApp(); },
       setGameBet(v) { selectedBetAmount = Number(v || 5); renderApp(); },
+      setBingoSize(v) { selectedBingoSize = [5,7,10].includes(Number(v)) ? Number(v) : 5; renderApp(); },
       resetFlappySelection() { selectedGameRoomId = ''; previousPage = 'games'; currentPage = 'flappyLobby'; renderApp(); },
       async replayFlappyRoom(id) {
         const room = gameRooms.find(r => r.id === id);
-        if (!room) return alert('Runda nu mai există.');
-        if (room.creator_email !== currentUser.email) return alert('Doar cel care a trimis invitația poate porni din nou.');
-        try {
-          stopFlappyLoop();
-          const startAt = new Date(Date.now() + 3200).toISOString();
-          const scores = { [room.creator_email]:0, [room.opponent_email]:0 };
-          const patch = { status:'countdown', start_at:startAt, scores, finished_players:{}, winner_email:null, finished_at:null };
-          const { data, error } = await supabase.from('game_rooms').update(patch).eq('id', id).select('*').maybeSingle();
-          if (error) throw error;
-          if (data) gameRooms = [data, ...gameRooms.filter(r => r.id !== id)];
-          selectedGameRoomId = id;
-          previousPage = 'games';
-          currentPage = 'flappyGame';
-          renderApp(true);
-          scheduleSoftRefresh(80);
-        } catch (error) {
-          alert('Eroare la repornirea jocului: ' + (error.message || error));
-        }
+        if (room && room.creator_email !== currentUser.email) return alert('Doar cel care a trimis invitația poate porni din nou.');
+        selectedGameRoomId = '';
+        selectedBingoSize = Number(room?.board_size || selectedBingoSize || 5);
+        selectedBetAmount = Number(room?.bet_amount || selectedBetAmount || 5);
+        previousPage = 'games';
+        currentPage = 'flappyLobby';
+        renderApp(true);
       },
       openMoneyHistory(type) { selectedMoneyHistoryType = type === 'received' ? 'received' : 'offered'; selectedMoneyHistoryMonth = firstOfMonth(todayISO()); previousPage = currentPage; currentPage = 'moneyHistory'; renderApp(); },
       shiftMoneyHistoryMonth(months) { selectedMoneyHistoryMonth = shiftMonth(selectedMoneyHistoryMonth || firstOfMonth(todayISO()), months); renderApp(); },
@@ -2840,7 +2882,7 @@
             goal_id: goalId,
             goal_title: String(goal.title || '').toUpperCase(),
             amount,
-            from_role: 'SOLD_JOCURI',
+            from_role: currentUser.email,
             to_role: goal.owner,
             date: todayISO(),
             timestamp: nowIso,
@@ -2853,7 +2895,7 @@
             user_email: currentUser.email,
             amount: -amount,
             type: 'withdraw',
-            note: 'Retras în obiectiv: ' + String(goal.title || '').toUpperCase(),
+            note: 'Retras din Sold Jocuri în obiectiv: ' + String(goal.title || '').toUpperCase(),
             created_at: nowIso
           });
           this.closeModal();
@@ -2888,6 +2930,7 @@
       async sendFlappyInvite(opponentEmailValue) {
         const custom = parseAmount(document.getElementById('customBetInput')?.value || '');
         const bet = Number.isFinite(custom) && custom > 0 ? custom : Number(selectedBetAmount || 5);
+        const size = [5,7,10].includes(Number(selectedBingoSize)) ? Number(selectedBingoSize) : 5;
         if (!opponentEmailValue || opponentEmailValue === currentUser.email) return alert('Nu găsesc contul partenerului. Intră și pe contul celălalt o dată.');
         if (!Number.isFinite(bet) || bet <= 0) return alert('Pariu invalid.');
         try {
@@ -2904,6 +2947,8 @@
             creator_email: currentUser.email,
             opponent_email: opponentEmailValue,
             bet_amount: bet,
+            board_size: size,
+            game_state: { size, boards:{}, marks:{}, lines:{}, letters:{} },
             status: 'invite',
             scores: {},
             finished_players: {}
@@ -2915,7 +2960,7 @@
             selectedGameRoomId = data.id;
           }
           renderApp(true);
-          scheduleSoftRefresh();
+          scheduleSoftRefresh(40);
         } catch (error) {
           alert('Eroare la invitație: ' + (error.message || error));
         }
@@ -2931,7 +2976,7 @@
           selectedGameRoomId = id;
           currentPage = accept ? 'flappyLobby' : 'games';
           renderApp(true);
-          scheduleSoftRefresh();
+          scheduleSoftRefresh(40);
         } catch (error) {
           alert('Eroare la răspuns: ' + (error.message || error));
         }
@@ -2942,17 +2987,54 @@
         if (room.creator_email !== currentUser.email) return alert('Doar cel care a trimis invitația pornește jocul.');
         if (room.status !== 'accepted') return alert('Jocul nu este acceptat încă.');
         try {
+          const size = Number(room.board_size || selectedBingoSize || 5);
           const startAt = new Date(Date.now() + 3200).toISOString();
+          const boards = { [room.creator_email]: createBingoBoard(size), [room.opponent_email]: createBingoBoard(size) };
+          const state = { size, boards, marks:{ [room.creator_email]:[], [room.opponent_email]:[] }, lines:{ [room.creator_email]:[], [room.opponent_email]:[] }, letters:{ [room.creator_email]:0, [room.opponent_email]:0 } };
           const scores = { [room.creator_email]:0, [room.opponent_email]:0 };
-          const { data, error } = await supabase.from('game_rooms').update({ status:'countdown', start_at:startAt, scores, finished_players:{} }).eq('id', id).select('*').maybeSingle();
+          const { data, error } = await supabase.from('game_rooms').update({ status:'countdown', start_at:startAt, board_size:size, game_state:state, scores, finished_players:{}, winner_email:null, finished_at:null }).eq('id', id).select('*').maybeSingle();
           if (error) throw error;
           if (data) gameRooms = [data, ...gameRooms.filter(r => r.id !== id)];
           selectedGameRoomId = id;
           currentPage = 'flappyGame';
           renderApp(true);
-          scheduleSoftRefresh();
+          scheduleSoftRefresh(40);
         } catch (error) {
           alert('Eroare la start: ' + (error.message || error));
+        }
+      },
+      async markBingoCell(id, index) {
+        const room = gameRooms.find(r => r.id === id);
+        if (!room || room.status !== 'playing') return;
+        const st = bingoState(room);
+        const email = currentUser.email;
+        const board = st.boards[email] || [];
+        if (!board.length || index < 0 || index >= board.length) return;
+        const marked = new Set(bingoMarksArray(st.marks[email]));
+        if (marked.has(index)) return;
+        marked.add(index);
+        const marks = Array.from(marked).sort((a,b)=>a-b);
+        const lines = bingoCompletedLines(st.size, marks);
+        const letters = Math.min(5, lines.length);
+        const localState = bingoState(room);
+        localState.marks[email] = marks;
+        localState.lines[email] = lines;
+        localState.letters[email] = letters;
+        room.game_state = localState;
+        room.scores = { ...(room.scores || {}), [email]: letters };
+        renderApp(true);
+        try {
+          const up = await supabase.rpc('update_bingo_player_state', { p_room_id:id, p_player_email:email, p_marks:marks, p_lines:lines, p_letters:letters });
+          if (up.error) throw up.error;
+          if (letters >= 5) {
+            const fin = await supabase.rpc('finish_bingo_player', { p_room_id:id, p_player_email:email, p_letters:letters });
+            if (fin.error) throw fin.error;
+            showConfetti();
+          }
+          scheduleSoftRefresh(30);
+        } catch (error) {
+          alert('Eroare la BINGO: ' + (error.message || error));
+          scheduleSoftRefresh(20);
         }
       },
       async saveFamilyCode() {
