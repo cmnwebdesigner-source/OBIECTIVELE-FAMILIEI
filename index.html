@@ -1337,7 +1337,7 @@
     const formatMonthTitle = (dateStr) => new Date(dateStr + 'T12:00:00').toLocaleDateString('ro-RO', { month:'long', year:'numeric' });
     const firstOfMonth = (dateStr) => { const d = new Date(dateStr + 'T12:00:00'); return new Date(d.getFullYear(), d.getMonth(), 1, 12).toISOString().split('T')[0]; };
     const shiftMonth = (dateStr, months) => { const d = new Date(dateStr + 'T12:00:00'); d.setMonth(d.getMonth() + months, 1); return d.toISOString().split('T')[0]; };
-    const hasMoneyOnDate = (dateStr) => visibleTransactions().some(t => transactionBelongsToFamily(t) && !isPiggyTransaction(t) && t.goal_id && String(t.date).slice(0,10) === dateStr && Number(t.amount || 0) !== 0);
+    const hasMoneyOnDate = (dateStr) => visibleTransactions().some(t => transactionBelongsToFamily(t) && transactionLooksLikeGoalMovement(t) && String(t.date).slice(0,10) === dateStr && Number(t.amount || 0) !== 0);
     const getProfile = (email) => profiles.find(p => p.email === email);
     const getRole = (email) => email === currentUser?.email ? (getProfile(email)?.role || currentUser?.user_metadata?.role || 'sot') : (getProfile(email)?.role || 'sotie');
     const roleLabel = (role) => role === 'sotie' ? 'Soție' : 'Soț';
@@ -1348,6 +1348,18 @@
     const actorPushLabel = () => getRole(currentUser?.email) === 'sotie' ? 'Soția' : 'Soțul';
     const pushGoalTitle = (goalOrTitle) => String(typeof goalOrTitle === 'string' ? goalOrTitle : goalOrTitle?.title || '').trim().toLocaleUpperCase('ro-RO');
     const pushRonAmount = (value) => `${money(Math.abs(Number(value || 0)))} RON`;
+    const isPartnerPersonalGoal = (goal) => {
+      if (!goal || isCommonGoal(goal)) return false;
+      const actorRole = getRole(currentUser?.email);
+      const ownerRole = String(goal.owner || goal.user_role || goal.role || '');
+      return !!actorRole && !!ownerRole && ownerRole !== actorRole;
+    };
+    const shouldNotifyForGoal = (goal, mode) => {
+      if (!goal) return false;
+      if (mode === 'remove') return false;
+      if (isCommonGoal(goal)) return true;
+      return isPartnerPersonalGoal(goal);
+    };
     const pushSupported = () => 'serviceWorker' in navigator && 'PushManager' in window && typeof Notification !== 'undefined';
     const urlBase64ToUint8Array = (base64String) => {
       const padding = '='.repeat((4 - base64String.length % 4) % 4);
@@ -1488,27 +1500,44 @@
     };
     const showCompletedOnHome = (goal) => !isGoalDone(goal) || Number(completedHold[goal.id] || 0) > Date.now();
     const normalizeGoalTitle = (value) => String(value || '').trim().toLocaleUpperCase('ro-RO');
+
+    const transactionMatchesGoal = (t, goal) => {
+      if (!t || !goal) return false;
+      if (isPiggyTransaction(t)) return false;
+
+      const goalId = String(goal.id || '');
+      const txGoalId = String(t.goal_id || '');
+      if (goalId && txGoalId && txGoalId === goalId) return true;
+
+      const goalTitle = normalizeGoalTitle(goal.title);
+      const txTitle = normalizeGoalTitle(t.goal_title || t.title || '');
+      if (!goalTitle || !txTitle || txTitle !== goalTitle) return false;
+
+      // Fallback important:
+      // unele înregistrări mai vechi pot să nu aibă goal_id,
+      // dar au goal_title. Așa reparăm statisticile vechi și comune.
+      if (isCommonGoal(goal)) return true;
+
+      const owner = String(goal.owner || '');
+      const from = String(t.from_role || '');
+      const to = String(t.to_role || '');
+      if (owner && (from === owner || to === owner)) return true;
+
+      return transactionBelongsToFamily(t);
+    };
+
+    const transactionLooksLikeGoalMovement = (t) => {
+      if (!t) return false;
+      if (isPiggyTransaction(t)) return false;
+      return !!String(t.goal_id || t.goal_title || '').trim();
+    };
+
     const goalHistoryTransactions = (goal) => {
       if (!goal) return [];
-      const goalId = String(goal.id || '');
-      const goalTitle = normalizeGoalTitle(goal.title);
-      const common = isCommonGoal(goal);
-
-      return visibleTransactions().filter(t => {
-        if (isPiggyTransaction(t)) return false;
-
-        const sameId = goalId && String(t.goal_id || '') === goalId;
-        const sameTitle = goalTitle && normalizeGoalTitle(t.goal_title) === goalTitle;
-
-        // La obiective comune, statisticile trebuie să apară la amândoi,
-        // inclusiv pentru banii puși/scoși de partener.
-        if (common && (sameId || sameTitle)) return true;
-
-        if (!transactionBelongsToFamily(t)) return false;
-        if (sameId) return true;
-
-        return false;
-      });
+      return visibleTransactions()
+        .filter(t => transactionBelongsToFamily(t) || transactionMatchesGoal(t, goal))
+        .filter(t => transactionMatchesGoal(t, goal))
+        .sort((a, b) => String(b.timestamp || b.date || '').localeCompare(String(a.timestamp || a.date || '')));
     };
 
     function markGoalCompleted(goal, { render = true } = {}) {
@@ -1695,7 +1724,7 @@
       const myGoals = goals.filter(g => !isCommonGoal(g) && g.owner === currentUser.email && goalBelongsToFamily(g) && showCompletedOnHome(g));
       const commonGoals = goals.filter(g => isCommonGoal(g) && goalBelongsToFamily(g) && showCompletedOnHome(g));
       const otherGoals = goals.filter(g => !isCommonGoal(g) && g.owner !== currentUser.email && goalBelongsToFamily(g) && showCompletedOnHome(g));
-      const todayTransactions = visibleTransactions().filter(t => transactionBelongsToFamily(t) && !isPiggyTransaction(t) && t.goal_id && String(t.date).slice(0,10) === todayISO()).slice(0,3);
+      const todayTransactions = visibleTransactions().filter(t => transactionBelongsToFamily(t) && transactionLooksLikeGoalMovement(t) && String(t.date).slice(0,10) === todayISO()).slice(0,3);
       const currentMoneyMonth = firstOfMonth(todayISO());
       const offered = moneyMovementsForMonth('offered', currentMoneyMonth).reduce((s,t) => s + Math.max(0, transactionRonAmount(t)), 0);
       const received = moneyMovementsForMonth('received', currentMoneyMonth).reduce((s,t) => s + Math.max(0, transactionRonAmount(t)), 0);
@@ -1865,7 +1894,7 @@ function piggyPageHTML() {
       if (current < target) return '';
       const sums = {};
       transactions
-        .filter(t => transactionBelongsToFamily(t) && t.goal_id === goal.id && Number(t.amount || 0) > 0)
+        .filter(t => transactionBelongsToFamily(t) && transactionMatchesGoal(t, goal) && Number(t.amount || 0) > 0)
         .forEach(t => {
           const email = t.from_role || 'necunoscut';
           sums[email] = (sums[email] || 0) + Number(t.amount || 0);
@@ -1949,7 +1978,7 @@ function piggyPageHTML() {
     }
 
     function calendarPageHTML() {
-      const selectedTransactions = visibleTransactions().filter(t => transactionBelongsToFamily(t) && !isPiggyTransaction(t) && t.goal_id && String(t.date).slice(0,10) === selectedDate);
+      const selectedTransactions = visibleTransactions().filter(t => transactionBelongsToFamily(t) && transactionLooksLikeGoalMovement(t) && String(t.date).slice(0,10) === selectedDate);
       const totalDay = selectedTransactions.reduce((s,t) => s + transactionRonAmount(t), 0);
       return `
         ${backButton()}
@@ -2106,8 +2135,9 @@ function piggyPageHTML() {
       const goal = goals.find(g => g.id === selectedGoalId);
       if (!goal) return `${backButton()}${emptyHTML('Obiectivul nu mai există.')}`;
       const list = goalHistoryTransactions(goal);
-      const added = list.filter(t => Number(t.amount) > 0).reduce((s,t) => s + Number(t.amount), 0);
-      const removed = list.filter(t => Number(t.amount) < 0).reduce((s,t) => s + Math.abs(Number(t.amount)), 0);
+      const txAmountForStats = (t) => Number(t.amount ?? t.amount_ron ?? 0);
+      const added = list.filter(t => txAmountForStats(t) > 0).reduce((s,t) => s + txAmountForStats(t), 0);
+      const removed = list.filter(t => txAmountForStats(t) < 0).reduce((s,t) => s + Math.abs(txAmountForStats(t)), 0);
       const current = Number(goal.current || 0), target = Number(goal.target || 1);
       const currency = goalCurrency(goal);
       const percent = Math.min(100, Math.round((current / target) * 100));
@@ -2134,7 +2164,7 @@ function piggyPageHTML() {
       const key = monthKeyFromDate(monthDate || todayISO());
       return visibleTransactions()
         .filter(t => transactionBelongsToFamily(t))
-        .filter(t => !isPiggyTransaction(t) && t.goal_id)
+        .filter(t => transactionLooksLikeGoalMovement(t))
         .filter(t => transactionRonAmount(t) > 0)
         .filter(t => transactionMonthKey(t) === key)
         .filter(t => type === 'offered'
@@ -2872,12 +2902,6 @@ function piggyPageHTML() {
               title: 'Obiectiv comun nou',
               body: `A fost adăugat obiectivul comun „${pushGoalTitle(title)}”.`
             });
-          } else {
-            sendPushNotification({
-              event_type: 'goal_created',
-              title: 'Obiectiv nou adăugat',
-              body: `${actorPushLabel()} a adăugat obiectivul „${pushGoalTitle(title)}”.`
-            });
           }
 
           suppressSoftUntil = Date.now() + 1300;
@@ -3070,40 +3094,32 @@ function piggyPageHTML() {
           const pushAmountText = pushRonAmount(localTransaction.amount_ron);
           const titleForPush = pushGoalTitle(g);
 
-          if (mode === 'remove') {
-            sendPushNotification({
-              event_type: 'money_removed',
-              title: 'Bani scoși',
-              body: `${actorPushLabel()} a scos ${pushAmountText} din „${titleForPush}”.`
-            });
-          } else if (mode === 'gift') {
-            sendPushNotification({
-              event_type: 'money_gifted',
-              title: 'Ai primit bani',
-              body: `${actorPushLabel()} ți-a oferit ${pushAmountText} pentru „${titleForPush}”.`
-            });
-          } else if (isCommonGoal(g)) {
-            sendPushNotification({
-              event_type: 'money_common_added',
-              title: 'Bani la obiectiv comun',
-              body: `${actorPushLabel()} a pus ${pushAmountText} la obiectivul comun „${titleForPush}”.`
-            });
-          } else {
-            sendPushNotification({
-              event_type: 'money_added',
-              title: 'Bani adăugați',
-              body: `${actorPushLabel()} a pus ${pushAmountText} la „${titleForPush}”.`
-            });
+          if (shouldNotifyForGoal(g, mode)) {
+            if (mode === 'gift' || isPartnerPersonalGoal(g)) {
+              sendPushNotification({
+                event_type: 'money_for_partner_goal',
+                title: 'Bani primiți la obiectiv',
+                body: `${actorPushLabel()} a pus ${pushAmountText} la obiectivul tău „${titleForPush}”.`
+              });
+            } else if (isCommonGoal(g)) {
+              sendPushNotification({
+                event_type: 'money_common_added',
+                title: 'Bani la obiectiv comun',
+                body: `${actorPushLabel()} a pus ${pushAmountText} la obiectivul comun „${titleForPush}”.`
+              });
+            }
           }
 
           suppressSoftUntil = Date.now() + 1600;
           if (old < target && finalAmount >= target) {
             markGoalCompleted(g);
-            sendPushNotification({
-              event_type: 'goal_completed',
-              title: 'Obiectiv finalizat 🎉',
-              body: `Obiectivul „${titleForPush}” a fost completat.`
-            });
+            if (shouldNotifyForGoal(g, mode)) {
+              sendPushNotification({
+                event_type: 'goal_completed',
+                title: 'Obiectiv finalizat 🎉',
+                body: `Obiectivul „${titleForPush}” a fost completat.`
+              });
+            }
           }
           scheduleSoftRefresh();
         } catch (error) {
@@ -3567,7 +3583,7 @@ function piggyPageHTML() {
       async clearDayHistory(event) {
         if (event) event.stopPropagation();
         const ids = visibleTransactions()
-          .filter(t => transactionBelongsToFamily(t) && !isPiggyTransaction(t) && t.goal_id && String(t.date).slice(0,10) === selectedDate)
+          .filter(t => transactionBelongsToFamily(t) && transactionLooksLikeGoalMovement(t) && String(t.date).slice(0,10) === selectedDate)
           .map(t => t.id);
         await window.appActions.deleteTransactionsByIds(ids, 'istoric zi');
       },
